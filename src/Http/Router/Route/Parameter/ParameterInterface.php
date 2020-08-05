@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace LDL\HTTP\Router\Route\Parameter;
+namespace LDL\Http\Router\Route\Parameter;
 
 use Swaggest\JsonSchema\Schema;
 
@@ -22,8 +22,14 @@ interface ParameterInterface
     public function getSchema() : ?Schema;
 
     /**
+     * @param mixed $value
      * @return mixed
      */
-    public function getTransformedValue();
+    public function getTransformedValue($value);
+
+    /**
+     * @return bool
+     */
+    public function isRequired() : bool;
 
 }

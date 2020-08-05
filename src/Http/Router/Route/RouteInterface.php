@@ -1,9 +1,12 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Route;
 
-use LDL\HTTP\Router\Route\Dispatcher\RouteDispatcherInterface;
-use LDL\HTTP\Router\Route\Parameter\ParameterCollection;
+use LDL\Http\Core\Request\RequestInterface;
+use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Guard\RouterGuardCollection;
+use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Parameter\ParameterCollection;
 
 interface RouteInterface
 {
@@ -18,6 +21,11 @@ interface RouteInterface
      * @return string
      */
     public function getDescription() : string;
+
+    /**
+     * @return RouterGuardCollection|null
+     */
+    public function getGuards() : ?RouterGuardCollection;
 
     /**
      * @return array
@@ -44,4 +52,6 @@ interface RouteInterface
      * @return RouteDispatcherInterface
      */
     public function getDispatcher() : RouteDispatcherInterface;
+
+    public function dispatch(RequestInterface $request, ResponseInterface $response) : void;
 }

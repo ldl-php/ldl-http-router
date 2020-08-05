@@ -1,9 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Guard;
 
-use LDL\HTTP\Core\Request\RequestInterface;
-use LDL\HTTP\Core\Request\ResponseInterface;
+use LDL\Http\Core\Request\RequestInterface;
+use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Route\Parameter\ParameterCollection;
 
 interface RouterGuardInterface
 {
@@ -19,9 +20,11 @@ interface RouterGuardInterface
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
+     * @param ParameterCollection $parameters
      */
     public function validate(
         RequestInterface $request,
-        ResponseInterface $response
+        ResponseInterface $response,
+        ParameterCollection $parameters = null
     ) : void;
 }

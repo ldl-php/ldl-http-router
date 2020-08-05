@@ -1,11 +1,16 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace LDL\HTTP\Router\Route;
+namespace LDL\Http\Router\Route;
 
-use LDL\HTTP\Core\Request\RequestInterface;
-use LDL\HTTP\Core\Request\ResponseInterface;
-use LDL\HTTP\Router\Route\Dispatcher\RouteDispatcherInterface;
-use LDL\HTTP\Router\Route\Parameter\ParameterCollection;
+use LDL\Http\Core\Request\RequestInterface;
+use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Guard\RouterGuardCollection;
+use LDL\Http\Router\Guard\RouterGuardInterface;
+use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
+use LDL\Http\Router\Route\Parameter\ParameterCollection;
+use LDL\Http\Router\Route\Parameter\ParameterInterface;
+use Swaggest\JsonSchema\Context;
 
 class Route implements RouteInterface
 {
@@ -35,15 +40,32 @@ class Route implements RouteInterface
     private $methods;
 
     /**
+     * @var RouterGuardCollection
+     */
+    private $guards;
+
+    /**
      * @var ?ParameterCollection
      */
     private $parameters;
 
+    /**
+     * Route constructor.
+     * @param string $prefix
+     * @param array $methods
+     * @param RouteDispatcherInterface $dispatcher
+     * @param ParameterCollection|null $parameters
+     * @param RouterGuardCollection|null $guards
+     * @param string $name
+     * @param string $description
+     * @throws Exception\InvalidMethodException
+     */
     public function __construct(
         string $prefix,
+        array $methods,
         RouteDispatcherInterface $dispatcher,
         ParameterCollection $parameters=null,
-        array $methods = [],
+        RouterGuardCollection $guards=null,
         string $name='',
         string $description=''
     )
@@ -56,6 +78,7 @@ class Route implements RouteInterface
         $this->name = $name;
         $this->description = $description;
         $this->methods = $methods;
+        $this->guards = $guards;
     }
 
     /**
@@ -106,11 +129,65 @@ class Route implements RouteInterface
         return $this->parameters;
     }
 
-    public function dispatch(RequestInterface $request, ResponseInterface $response)
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @throws InvalidParameterException
+     * @throws \Swaggest\JsonSchema\Exception
+     */
+    public function dispatch(RequestInterface $request, ResponseInterface $response) : void
     {
+        $requestParameters = (object)$request->getQuery()->all();
 
-        $this->dispatcher->dispatch($request, $response);
+        $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_BEFORE);
 
+        $schema = $this->parameters->getSchema() ?? $this->parameters->getParametersSchema();
+
+        if(null !== $schema){
+            try{
+                $context = new Context();
+                $context->tolerateStrings = true;
+                $schema->in($requestParameters, $context);
+            }catch(\Exception $e){
+                $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+                throw new InvalidParameterException($e->getMessage());
+            }
+        }
+
+        $this->dispatcher->dispatch(
+            $request,
+            $response,
+            $this->parameters
+        );
+
+        $this->applyGuards($request,$response, RouterGuardInterface::VALIDATE_AFTER);
+    }
+
+    private function applyGuards(
+        RequestInterface $request,
+        ResponseInterface $response,
+        string $guardType
+    ) : void
+    {
+        if(null === $this->guards){
+            return;
+        }
+
+        /**
+         * @var RouterGuardInterface $guard
+         */
+        foreach($this->guards->filterByType($guardType) as $guard){
+            $guard->validate($request, $response, $this->parameters);
+        }
+
+    }
+
+    /**
+     * @return RouterGuardCollection|null
+     */
+    public function getGuards(): ?RouterGuardCollection
+    {
+        return $this->guards;
     }
 
     //Private methods
@@ -126,9 +203,9 @@ class Route implements RouteInterface
         array $methods
     ) : void
     {
-        $validMethods = ['any','get','post','put','delete'];
+        $validMethods = ['any','get','post','put','delete', 'head'];
 
-        $diff = array_diff($validMethods, $methods);
+        $diff = array_diff($methods, $validMethods);
 
         $diffCount = count($diff);
 

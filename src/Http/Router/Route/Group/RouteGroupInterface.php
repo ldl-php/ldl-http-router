@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Group;
 
-use LDL\Http\Router\Guard\RouteGuardCollection;
+use LDL\Http\Router\Guard\RouterGuardCollection;
 
 interface RouteGroupInterface
 {
@@ -44,8 +44,8 @@ interface RouteGroupInterface
      * Request content type JSON
      * etc ...
      *
-     * @return RouteGuardCollection|null
+     * @return RouterGuardCollection|null
      */
-    public function getGuards() : ?RouteGuardCollection;
+    public function getGuards() : ?RouterGuardCollection;
 
 }

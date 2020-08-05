@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace LDL\HTTP\Router\Route\Parameter;
+namespace LDL\Http\Router\Route\Parameter;
 
 use Swaggest\JsonSchema\Schema;
 
@@ -24,7 +24,7 @@ class Parameter implements ParameterInterface
     /**
      * @var string|null
      */
-    private $value;
+    private $defaultValue;
 
     /**
      * @var bool
@@ -41,19 +41,26 @@ class Parameter implements ParameterInterface
      */
     private $transformedValue;
 
+    /**
+     * @var bool
+     */
+    private $required;
+
     public function __construct(
         string $name,
-        ?string $value,
+        bool $required,
+        string $defaultValue=null,
         string $description='',
         callable $transformer=null,
         Schema $schema = null
     )
     {
-        $this->setName($name)
-            ->setDescription($description)
-            ->setSchema($schema)
-            ->setValue($value)
-            ->setTransformer($transformer);
+        $this->name = $name;
+        $this->description = $description;
+        $this->schema = $schema;
+        $this->required = $required;
+        $this->transformer = $transformer;
+        $this->defaultValue = $defaultValue;
     }
 
     public function getName(): string
@@ -71,12 +78,12 @@ class Parameter implements ParameterInterface
         return $this->schema;
     }
 
-    public function getValue() : ?string
+    public function getDefaultValue() : ?string
     {
-        return $this->value;
+        return $this->defaultValue;
     }
 
-    public function getTransformedValue()
+    public function getTransformedValue($value)
     {
         if(null === $this->transformer){
             $msg = sprintf(
@@ -91,40 +98,12 @@ class Parameter implements ParameterInterface
             return $this->transformedValue;
         }
 
-        return $this->transformedValue = ($this->transformer)($this->value);
+        return $this->transformedValue = ($this->transformer)($value);
     }
 
-    // Private methods
-
-    private function setName(string $name) : self
+    public function isRequired() : bool
     {
-        $this->name = $name;
-        return $this;
+        return $this->required;
     }
-
-    private function setDescription(string $description) : self
-    {
-        $this->description = $description;
-        return $this;
-    }
-
-    private function setSchema(Schema $schema=null) : self
-    {
-        $this->schema = $schema;
-        return $this;
-    }
-
-    private function setValue(?string $value) : self
-    {
-        $this->value = $value;
-        return $this;
-    }
-
-    private function setTransformer(callable $transformer=null) : self
-    {
-        $this->transformer = $transformer;
-        return $this;
-    }
-
 
 }

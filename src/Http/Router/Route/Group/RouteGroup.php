@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace LDL\HTTP\Router\Route\Group;
+namespace LDL\Http\Router\Route\Group;
+
+use LDL\Http\Router\Guard\RouterGuardCollection;
 
 class RouteGroup implements RouteGroupInterface
 {
@@ -24,10 +26,16 @@ class RouteGroup implements RouteGroupInterface
      */
     private $description;
 
+    /**
+     * @var ?RouteGuardCollection
+     */
+    private $guards;
+
     public function __construct(
+        string $name,
         string $prefix,
-        RouteCollection $routes = null,
-        string $name='',
+        RouteCollection $routes,
+        RouterGuardCollection $guards=null,
         string $description=''
     )
     {
@@ -35,6 +43,7 @@ class RouteGroup implements RouteGroupInterface
         $this->prefix = $prefix;
         $this->name = $name;
         $this->description = $description;
+        $this->guards = $guards;
     }
 
     public function getName() : string
@@ -52,9 +61,14 @@ class RouteGroup implements RouteGroupInterface
         return $this->prefix;
     }
 
-    public function  getRoutes(): RouteCollection
+    public function getRoutes(): RouteCollection
     {
         return $this->routes;
+    }
+
+    public function getGuards(): ?RouterGuardCollection
+    {
+        return $this->guards;
     }
 
 }
