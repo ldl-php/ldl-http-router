@@ -87,12 +87,13 @@ class Router
                 ));
         }catch(ParameterException $e){
 
+            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+
         }catch(HttpMethodNotAllowedException $e){
 
             $this->response->setStatusCode(ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED);
 
         }
-
 
         return $this->response;
     }
