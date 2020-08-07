@@ -5,22 +5,19 @@ namespace LDL\Http\Router\Route;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Guard\RouterGuardCollection;
+use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
+use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
+use Symfony\Component\Cache\Adapter\AdapterInterface as CacheAdapterInterface;
 
 interface RouteInterface
 {
     /**
      * Brief name of the route
-     * @return string
+     * @return RouteConfig
      */
-    public function getName() : string;
-
-    /**
-     * Return a brief description about what does this route do
-     * @return string
-     */
-    public function getDescription() : string;
+    public function getConfig() : RouteConfig;
 
     /**
      * @return RouterGuardCollection|null
@@ -28,20 +25,19 @@ interface RouteInterface
     public function getGuards() : ?RouterGuardCollection;
 
     /**
-     * @return array
-     */
-    public function getMethods() : array;
-
-    /**
-     * Route prefix, example: /user/create, this is the prefix that a request must match
-     * @return string
-     */
-    public function getPrefix() : string;
-
-    /**
      * @return ParameterCollection|null
      */
     public function getParameters() : ?ParameterCollection;
+
+    /**
+     * @return RouteCacheConfig|null
+     */
+    public function getCacheConfig() : ?RouteCacheConfig;
+
+    /**
+     * @return CacheAdapterInterface|null
+     */
+    public function getCacheAdapter() : ? CacheAdapterInterface;
 
     /**
      * Returns the route dispatcher which is in charge of adding logic

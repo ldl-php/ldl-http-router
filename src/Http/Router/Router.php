@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router;
 
@@ -7,9 +7,11 @@ use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
-use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
+use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
+use Phroute\Phroute\Exception\HttpRouteNotFoundException;
+use Symfony\Component\Cache\Adapter\AdapterInterface as CacheAdapterInterface;
 
 class Router
 {
@@ -28,15 +30,22 @@ class Router
      */
     private $response;
 
+    /**
+     * @var CacheAdapterInterface
+     */
+    private $cacheAdapter;
+
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
+        CacheAdapterInterface $cacheAdapter=null,
         RouteCollector $collector=null
     )
     {
         $this->collector = $collector ?? new RouteCollector();
         $this->request = $request;
         $this->response = $response;
+        $this->cacheAdapter = $cacheAdapter;
     }
 
     public function addRoute(RouteInterface $route) : void
@@ -44,11 +53,12 @@ class Router
         $request  = $this->request;
         $response = $this->response;
 
-        foreach($route->getMethods() as $m) {
-            $this->collector->$m($route->getPrefix(), static function () use ($route, $request, $response) {
-                $route->dispatch($request, $response);
-            });
-        }
+        $config = $route->getConfig();
+        $method = $config->getMethod();
+
+        $this->collector->$method($config->getPrefix(), static function () use ($route, $request, $response) {
+            $route->dispatch($request, $response);
+        });
     }
 
     public function addGroup(RouteGroupInterface $group) : void
@@ -63,13 +73,12 @@ class Router
                  * @var RouteInterface $r
                  */
                 foreach($group as $r){
-                    $methods = $r->getMethods();
+                    $config = $r->getConfig();
+                    $method = $config->getMethod();
 
-                    foreach($methods as $m){
-                        $router->$m($r->getPrefix(), static function() use ($r, $request, $response){
-                            $r->dispatch($request, $response);
-                        });
-                    }
+                    $router->$method($r->getPrefix(), static function() use ($r, $request, $response){
+                        $r->dispatch($request, $response);
+                    });
                 }
             }
         );
@@ -81,17 +90,24 @@ class Router
             $dispatcher = new Dispatcher($this->collector->getData());
 
             $dispatcher->dispatch(
-                $_SERVER['REQUEST_METHOD'],
-                parse_url($_SERVER['REQUEST_URI'],
-                    \PHP_URL_PATH
-                ));
+                $this->request->getMethod(),
+                $this->request->getRequestUri(),
+                \PHP_URL_PATH
+            );
         }catch(ParameterException $e){
 
+            $this->response->setContent($e->getMessage());
             $this->response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
 
         }catch(HttpMethodNotAllowedException $e){
 
+            $this->response->setContent($e->getMessage());
             $this->response->setStatusCode(ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED);
+
+        }catch(HttpRouteNotFoundException $e){
+
+            $this->response->setContent($e->getMessage());
+            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_NOT_FOUND);
 
         }
 

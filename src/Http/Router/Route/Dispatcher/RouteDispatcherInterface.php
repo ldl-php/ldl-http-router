@@ -12,5 +12,5 @@ interface RouteDispatcherInterface
         RequestInterface $request,
         ResponseInterface $response,
         ParameterCollection $parameters = null
-    ) : void;
+    );
 }

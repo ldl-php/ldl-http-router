@@ -7,7 +7,8 @@
         "phroute/phroute": "~2.1",
         "ldl-framework/http-core": "dev-master",
         "ldl-framework/typed-collection": "^0.0.1",
-        "swaggest/json-schema": "^0.12.29"
+        "swaggest/json-schema": "^0.12.29",
+        "symfony/cache": "^5.1"
     },
     "license": "MIT",
     "authors": [

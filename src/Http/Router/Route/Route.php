@@ -6,38 +6,28 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Guard\RouterGuardCollection;
 use LDL\Http\Router\Guard\RouterGuardInterface;
+use LDL\Http\Router\Route\Cache\CacheableInterface;
+use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
+use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
-use LDL\Http\Router\Route\Parameter\ParameterInterface;
+
+use Symfony\Component\Cache\Adapter\AdapterInterface as CacheAdapterInterface;
+
 use Swaggest\JsonSchema\Context;
 
 class Route implements RouteInterface
 {
     /**
+     * @var RouteConfig
+     */
+    private $config;
+
+    /**
      * @var RouteDispatcherInterface
      */
     private $dispatcher;
-
-    /**
-     * @var string
-     */
-    private $prefix;
-
-    /**
-     * @var string
-     */
-    private $name;
-
-    /**
-     * @var string
-     */
-    private $description;
-
-    /**
-     * @var string
-     */
-    private $methods;
 
     /**
      * @var RouterGuardCollection
@@ -50,67 +40,48 @@ class Route implements RouteInterface
     private $parameters;
 
     /**
+     * @var CacheAdapterInterface
+     */
+    private $cacheAdapter;
+
+    /**
+     * @var RouteCacheConfig
+     */
+    private $cacheConfig;
+
+    /**
      * Route constructor.
-     * @param string $prefix
-     * @param array $methods
+     *
+     * @param RouteConfig $config
      * @param RouteDispatcherInterface $dispatcher
      * @param ParameterCollection|null $parameters
      * @param RouterGuardCollection|null $guards
-     * @param string $name
-     * @param string $description
-     * @throws Exception\InvalidMethodException
+     * @param CacheAdapterInterface|null $cacheAdapter
+     * @param RouteCacheConfig|null $cacheConfig
      */
     public function __construct(
-        string $prefix,
-        array $methods,
+        RouteConfig $config,
         RouteDispatcherInterface $dispatcher,
         ParameterCollection $parameters=null,
         RouterGuardCollection $guards=null,
-        string $name='',
-        string $description=''
+        CacheAdapterInterface $cacheAdapter = null,
+        RouteCacheConfig $cacheConfig = null
     )
     {
-        $this->validateMethods($prefix, $methods);
-
+        $this->config = $config;
         $this->parameters = $parameters;
         $this->dispatcher = $dispatcher;
-        $this->prefix = $prefix;
-        $this->name = $name;
-        $this->description = $description;
-        $this->methods = $methods;
+        $this->cacheAdapter = $cacheAdapter;
+        $this->cacheConfig = $cacheConfig;
         $this->guards = $guards;
     }
 
     /**
-     * @return string
+     * @return RouteConfig
      */
-    public function getName() : string
+    public function getConfig(): RouteConfig
     {
-        return $this->name;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
-    /**
-     * @return array
-     */
-    public function getMethods() : array
-    {
-        return $this->methods;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPrefix(): string
-    {
-        return $this->prefix;
+        return $this->config;
     }
 
     /**
@@ -127,6 +98,22 @@ class Route implements RouteInterface
     public function getParameters() : ?ParameterCollection
     {
         return $this->parameters;
+    }
+
+    /**
+     * @return RouteCacheConfig|null
+     */
+    public function getCacheConfig() : ?RouteCacheConfig
+    {
+        return $this->cacheConfig;
+    }
+
+    /**
+     * @return CacheAdapterInterface|null
+     */
+    public function getCacheAdapter() : ?CacheAdapterInterface
+    {
+        return $this->cacheAdapter;
     }
 
     /**
@@ -154,13 +141,26 @@ class Route implements RouteInterface
             }
         }
 
-        $this->dispatcher->dispatch(
+        $cache = $this->dispatchFromCache($request, $response);
+
+        if($cache){
+            $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
+            return;
+        }
+
+        $result = $this->dispatcher->dispatch(
             $request,
             $response,
             $this->parameters
         );
 
-        $this->applyGuards($request,$response, RouterGuardInterface::VALIDATE_AFTER);
+        if(null !== $result){
+            $response->setContent(
+                $this->config->getContentType() === 'application/json' ? json_encode($result) : $result
+            );
+        }
+
+        $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
     }
 
     private function applyGuards(
@@ -190,37 +190,50 @@ class Route implements RouteInterface
         return $this->guards;
     }
 
-    //Private methods
-
-    /**
-     * @param string $prefix
-     * @param array $methods
-     *
-     * @throws Exception\InvalidMethodException
-     */
-    private function validateMethods(
-        string $prefix,
-        array $methods
-    ) : void
+    private function dispatchFromCache(RequestInterface $request, ResponseInterface $response) : bool
     {
-        $validMethods = ['any','get','post','put','delete', 'head'];
-
-        $diff = array_diff($methods, $validMethods);
-
-        $diffCount = count($diff);
-
-        if(0 === $diffCount){
-            return;
+        if(null === $this->cacheAdapter){
+            return false;
         }
 
-        $msg = sprintf(
-            'Invalid method%s, specified: "%s" for route with prefix: "%s"',
-            $diffCount > 0 ? 's' : '',
-            implode(', ', $methods),
-            $prefix
+        if(null === $this->cacheConfig){
+            return false;
+        }
+
+        if(!$this->dispatcher instanceof CacheableInterface){
+            return false;
+        }
+
+        /**
+         * @var CacheableInterface $dispatcher
+         */
+        $dispatcher = $this->dispatcher;
+
+        $cache = $this->cacheAdapter->getItem($dispatcher->getCacheKey($request));
+
+        if(!$cache->isHit()) {
+            $response->setExpires(
+                \DateTime::createFromFormat(
+                    'Y-m-d H:i:s',
+                    $this->cacheConfig
+                        ->getExpiresAt()
+                        ->format('Y-m-d H:i:s')
+                )
+            );
+
+            $this->dispatcher->dispatch($request, $response);
+
+            $response->setContent($response->getContent());
+
+            return true;
+        }
+
+        $this->dispatcher->dispatch(
+            $request,
+            $response,
+            $this->parameters
         );
 
-        throw new Exception\InvalidMethodException($msg);
     }
 
 }
