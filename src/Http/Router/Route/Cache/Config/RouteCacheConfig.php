@@ -2,8 +2,6 @@
 
 namespace LDL\Http\Router\Route\Cache\Config;
 
-use LDL\Http\Core\Request\RequestInterface;
-
 class RouteCacheConfig
 {
     /**

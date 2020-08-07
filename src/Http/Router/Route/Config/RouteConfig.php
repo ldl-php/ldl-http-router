@@ -51,6 +51,7 @@ class RouteConfig implements \JsonSerializable
     {
         $this->setPrefix($prefix)
         ->setMethod($method)
+        ->setContentType($contentType)
         ->setName($name)
         ->setDescription($description);
     }
@@ -123,8 +124,8 @@ class RouteConfig implements \JsonSerializable
         $msg = sprintf(
             'Invalid method specified: "%s" for route with prefix: "%s", valid methods are: "%s"',
             $method,
-            implode(', ', RequestHelper::getAvailableHttpMethods()),
-            $this->prefix
+            $this->prefix,
+            implode(', ', RequestHelper::getAvailableHttpMethods())
         );
 
         throw new Exception\InvalidHttpMethodException($msg);
@@ -142,13 +143,13 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    public function setPrefix(string $prefix) : self
+    private function setPrefix(string $prefix) : self
     {
         $this->prefix = $prefix;
         return $this;
     }
 
-    public function setDescription(string $description) : self
+    private function setDescription(string $description) : self
     {
         $this->description = $description;
         return $this;
