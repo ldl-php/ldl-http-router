@@ -34,7 +34,7 @@ class RouteGroup implements RouteGroupInterface
     public function __construct(
         string $name,
         string $prefix,
-        RouteCollection $routes,
+        RouteCollection $routes = null,
         RouterGuardCollection $guards=null,
         string $description=''
     )
