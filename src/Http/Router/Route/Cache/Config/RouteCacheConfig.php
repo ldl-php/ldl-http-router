@@ -12,19 +12,33 @@ class RouteCacheConfig
     /**
      * @var string
      */
-    private $cacheKey;
+    private $secretKey;
+
+    /**
+     * @var bool
+     */
+    private $isPurgeable;
+
+    /**
+     * @var bool
+     */
+    private $enabled;
 
     public function __construct(
-        string $cacheKey,
-        string $expiresAt=null
+        bool $isPurgeable,
+        bool $enabled=true,
+        ?string $expiresAt=null,
+        ?string $secretKey=null
     )
     {
         if(null !== $expiresAt){
             $expiresAt = \DateInterval::createFromDateString($expiresAt);
         }
 
-        $this->cacheKey = $cacheKey;
+        $this->enabled = $enabled;
+        $this->secretKey = $secretKey;
         $this->expiresAt = $expiresAt;
+        $this->isPurgeable = $isPurgeable;
     }
 
     /**
@@ -38,9 +52,19 @@ class RouteCacheConfig
     /**
      * @return string
      */
-    public function getKey() : string
+    public function getSecretKey() : ?string
     {
-        return $this->cacheKey;
+        return $this->secretKey;
+    }
+
+    public function isPurgeable() : bool
+    {
+        return $this->isPurgeable;
+    }
+
+    public function isEnabled() : bool
+    {
+        return $this->enabled;
     }
 
 }

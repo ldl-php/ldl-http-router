@@ -30,16 +30,6 @@ interface RouteInterface
     public function getParameters() : ?ParameterCollection;
 
     /**
-     * @return RouteCacheConfig|null
-     */
-    public function getCacheConfig() : ?RouteCacheConfig;
-
-    /**
-     * @return CacheAdapterInterface|null
-     */
-    public function getCacheAdapter() : ? CacheAdapterInterface;
-
-    /**
      * Returns the route dispatcher which is in charge of adding logic
      * to the request.
      *

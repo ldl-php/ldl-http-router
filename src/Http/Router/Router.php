@@ -56,6 +56,17 @@ class Router
         $config = $route->getConfig();
         $method = $config->getMethod();
 
+        if(!method_exists($this->collector, $method)){
+            $msg = sprintf(
+              '%s is not a recognized method',
+              $method
+            );
+
+            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+
+            throw new Exception\InvalidHttpMethodException($msg);
+        }
+
         $this->collector->$method($config->getPrefix(), static function () use ($route, $request, $response) {
             $route->dispatch($request, $response);
         });
@@ -91,8 +102,7 @@ class Router
 
             $dispatcher->dispatch(
                 $this->request->getMethod(),
-                $this->request->getRequestUri(),
-                \PHP_URL_PATH
+                parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );
         }catch(ParameterException $e){
 

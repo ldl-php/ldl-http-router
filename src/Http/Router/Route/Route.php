@@ -4,16 +4,15 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Route\Cache\RouteCacheManager;
 use LDL\Http\Router\Guard\RouterGuardCollection;
 use LDL\Http\Router\Guard\RouterGuardInterface;
 use LDL\Http\Router\Route\Cache\CacheableInterface;
-use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
 
-use Symfony\Component\Cache\Adapter\AdapterInterface as CacheAdapterInterface;
 
 use Swaggest\JsonSchema\Context;
 
@@ -40,14 +39,9 @@ class Route implements RouteInterface
     private $parameters;
 
     /**
-     * @var CacheAdapterInterface
+     * @var RouteCacheManager
      */
-    private $cacheAdapter;
-
-    /**
-     * @var RouteCacheConfig
-     */
-    private $cacheConfig;
+    private $cacheManager;
 
     /**
      * Route constructor.
@@ -56,24 +50,21 @@ class Route implements RouteInterface
      * @param RouteDispatcherInterface $dispatcher
      * @param ParameterCollection|null $parameters
      * @param RouterGuardCollection|null $guards
-     * @param CacheAdapterInterface|null $cacheAdapter
-     * @param RouteCacheConfig|null $cacheConfig
+     * @param RouteCacheManager $cacheManager
      */
     public function __construct(
         RouteConfig $config,
         RouteDispatcherInterface $dispatcher,
+        RouteCacheManager $cacheManager,
         ParameterCollection $parameters=null,
-        RouterGuardCollection $guards=null,
-        CacheAdapterInterface $cacheAdapter = null,
-        RouteCacheConfig $cacheConfig = null
+        RouterGuardCollection $guards=null
     )
     {
         $this->config = $config;
         $this->parameters = $parameters;
         $this->dispatcher = $dispatcher;
-        $this->cacheAdapter = $cacheAdapter;
-        $this->cacheConfig = $cacheConfig;
         $this->guards = $guards;
+        $this->cacheManager = $cacheManager;
     }
 
     /**
@@ -100,28 +91,6 @@ class Route implements RouteInterface
         return $this->parameters;
     }
 
-    /**
-     * @return RouteCacheConfig|null
-     */
-    public function getCacheConfig() : ?RouteCacheConfig
-    {
-        return $this->cacheConfig;
-    }
-
-    /**
-     * @return CacheAdapterInterface|null
-     */
-    public function getCacheAdapter() : ?CacheAdapterInterface
-    {
-        return $this->cacheAdapter;
-    }
-
-    /**
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @throws InvalidParameterException
-     * @throws \Swaggest\JsonSchema\Exception
-     */
     public function dispatch(RequestInterface $request, ResponseInterface $response) : void
     {
         $requestParameters = (object)$request->getQuery()->all();
@@ -141,10 +110,9 @@ class Route implements RouteInterface
             }
         }
 
-        $cache = $this->dispatchFromCache($request, $response);
+        $cacheHit = $this->cacheManager->has($this->dispatcher, $request, $response);
 
-        if($cache){
-            $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
+        if($cacheHit){
             return;
         }
 
@@ -161,8 +129,25 @@ class Route implements RouteInterface
         }
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
+
+        $this->cacheManager->store($this->dispatcher, $request, $response);
     }
 
+    /**
+     * @return RouterGuardCollection|null
+     */
+    public function getGuards(): ?RouterGuardCollection
+    {
+        return $this->guards;
+    }
+
+    // Private methods
+
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @param string $guardType
+     */
     private function applyGuards(
         RequestInterface $request,
         ResponseInterface $response,
@@ -179,60 +164,6 @@ class Route implements RouteInterface
         foreach($this->guards->filterByType($guardType) as $guard){
             $guard->validate($request, $response, $this->parameters);
         }
-
-    }
-
-    /**
-     * @return RouterGuardCollection|null
-     */
-    public function getGuards(): ?RouterGuardCollection
-    {
-        return $this->guards;
-    }
-
-    private function dispatchFromCache(RequestInterface $request, ResponseInterface $response) : bool
-    {
-        if(null === $this->cacheAdapter){
-            return false;
-        }
-
-        if(null === $this->cacheConfig){
-            return false;
-        }
-
-        if(!$this->dispatcher instanceof CacheableInterface){
-            return false;
-        }
-
-        /**
-         * @var CacheableInterface $dispatcher
-         */
-        $dispatcher = $this->dispatcher;
-
-        $cache = $this->cacheAdapter->getItem($dispatcher->getCacheKey($request));
-
-        if(!$cache->isHit()) {
-            $response->setExpires(
-                \DateTime::createFromFormat(
-                    'Y-m-d H:i:s',
-                    $this->cacheConfig
-                        ->getExpiresAt()
-                        ->format('Y-m-d H:i:s')
-                )
-            );
-
-            $this->dispatcher->dispatch($request, $response);
-
-            $response->setContent($response->getContent());
-
-            return true;
-        }
-
-        $this->dispatcher->dispatch(
-            $request,
-            $response,
-            $this->parameters
-        );
 
     }
 
