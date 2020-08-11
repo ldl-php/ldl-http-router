@@ -4,15 +4,9 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Cache\RouteCacheManager;
-use LDL\Http\Router\Guard\RouterGuardCollection;
 use LDL\Http\Router\Guard\RouterGuardInterface;
-use LDL\Http\Router\Route\Cache\CacheableInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
-use LDL\Http\Router\Route\Parameter\ParameterCollection;
-
 
 use Swaggest\JsonSchema\Context;
 
@@ -23,48 +17,9 @@ class Route implements RouteInterface
      */
     private $config;
 
-    /**
-     * @var RouteDispatcherInterface
-     */
-    private $dispatcher;
-
-    /**
-     * @var RouterGuardCollection
-     */
-    private $guards;
-
-    /**
-     * @var ?ParameterCollection
-     */
-    private $parameters;
-
-    /**
-     * @var RouteCacheManager
-     */
-    private $cacheManager;
-
-    /**
-     * Route constructor.
-     *
-     * @param RouteConfig $config
-     * @param RouteDispatcherInterface $dispatcher
-     * @param ParameterCollection|null $parameters
-     * @param RouterGuardCollection|null $guards
-     * @param RouteCacheManager $cacheManager
-     */
-    public function __construct(
-        RouteConfig $config,
-        RouteDispatcherInterface $dispatcher,
-        RouteCacheManager $cacheManager,
-        ParameterCollection $parameters=null,
-        RouterGuardCollection $guards=null
-    )
+    public function __construct(RouteConfig $config)
     {
         $this->config = $config;
-        $this->parameters = $parameters;
-        $this->dispatcher = $dispatcher;
-        $this->guards = $guards;
-        $this->cacheManager = $cacheManager;
     }
 
     /**
@@ -72,34 +27,24 @@ class Route implements RouteInterface
      */
     public function getConfig(): RouteConfig
     {
-        return $this->config;
-    }
-
-    /**
-     * @return RouteDispatcherInterface
-     */
-    public function getDispatcher(): RouteDispatcherInterface
-    {
-        return $this->dispatcher;
-    }
-
-    /**
-     * @return ParameterCollection|null
-     */
-    public function getParameters() : ?ParameterCollection
-    {
-        return $this->parameters;
+        return clone($this->config);
     }
 
     public function dispatch(RequestInterface $request, ResponseInterface $response) : void
     {
+        $config = $this->config;
+
         $requestParameters = (object)$request->getQuery()->all();
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_BEFORE);
 
-        $schema = $this->parameters->getSchema() ?? $this->parameters->getParametersSchema();
+        $schema = null;
+        $cacheManager = $config->getCacheManager();
+        $params = $config->getParameters();
 
-        if(null !== $schema){
+        if($params){
+            $schema = $params->getSchema() ?? $params->getParametersSchema();
+
             try{
                 $context = new Context();
                 $context->tolerateStrings = true;
@@ -110,16 +55,18 @@ class Route implements RouteInterface
             }
         }
 
-        $cacheHit = $this->cacheManager->has($this->dispatcher, $request, $response);
+        if($cacheManager){
+            $cacheHit = $cacheManager->has($config->getDispatcher(), $request, $response);
 
-        if($cacheHit){
-            return;
+            if($cacheHit){
+                return;
+            }
         }
 
-        $result = $this->dispatcher->dispatch(
+        $result = $config->getDispatcher()->dispatch(
             $request,
             $response,
-            $this->parameters
+            $config->getParameters()
         );
 
         if(null !== $result){
@@ -130,15 +77,9 @@ class Route implements RouteInterface
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
 
-        $this->cacheManager->store($this->dispatcher, $request, $response);
-    }
-
-    /**
-     * @return RouterGuardCollection|null
-     */
-    public function getGuards(): ?RouterGuardCollection
-    {
-        return $this->guards;
+        if($config->getCacheManager()) {
+            $cacheManager->store($config->getDispatcher(), $request, $response);
+        }
     }
 
     // Private methods
@@ -154,15 +95,17 @@ class Route implements RouteInterface
         string $guardType
     ) : void
     {
-        if(null === $this->guards){
+        $guards = $this->config->getGuards();
+
+        if(null === $guards){
             return;
         }
 
         /**
          * @var RouterGuardInterface $guard
          */
-        foreach($this->guards->filterByType($guardType) as $guard){
-            $guard->validate($request, $response, $this->parameters);
+        foreach($guards->filterByType($guardType) as $guard){
+            $guard->validate($request, $response, $this->config->getParameters());
         }
 
     }

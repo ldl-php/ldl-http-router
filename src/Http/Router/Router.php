@@ -4,6 +4,8 @@ namespace LDL\Http\Router;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Route\Group\RouteCollection;
+use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
@@ -48,7 +50,7 @@ class Router
         $this->cacheAdapter = $cacheAdapter;
     }
 
-    public function addRoute(RouteInterface $route) : void
+    public function addRoute(RouteInterface $route, RouteGroupInterface $group=null) : self
     {
         $request  = $this->request;
         $response = $this->response;
@@ -58,8 +60,8 @@ class Router
 
         if(!method_exists($this->collector, $method)){
             $msg = sprintf(
-              '%s is not a recognized method',
-              $method
+                '%s is not a recognized method',
+                $method
             );
 
             $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
@@ -67,32 +69,32 @@ class Router
             throw new Exception\InvalidHttpMethodException($msg);
         }
 
-        $this->collector->$method($config->getPrefix(), static function () use ($route, $request, $response) {
+        $path = "v{$config->getVersion()}/{$config->getPrefix()}";
+
+        if(null !== $group){
+            $path = "{$group->getPrefix()}/$path";
+        }
+
+        if(null !== $group && $group->getGuards()){
+            foreach($group->getGuards() as $guard){
+                $route->getConfig()->addGuard($guard);
+            }
+        }
+
+        $this->collector->$method($path, static function () use ($route, $request, $response) {
             $route->dispatch($request, $response);
         });
+
+        return $this;
     }
 
-    public function addGroup(RouteGroupInterface $group) : void
+    public function addGroup(RouteGroupInterface $group) : self
     {
-        $request  = $this->request;
-        $response = $this->response;
+        foreach($group->getRoutes() as $r){
+            $this->addRoute($r, $group);
+        }
 
-        $this->collector->group(
-            ['prefix' => $group->getName()],
-            static function($router) use ($group, $request, $response) {
-                /**
-                 * @var RouteInterface $r
-                 */
-                foreach($group as $r){
-                    $config = $r->getConfig();
-                    $method = $config->getMethod();
-
-                    $router->$method($r->getPrefix(), static function() use ($r, $request, $response){
-                        $r->dispatch($request, $response);
-                    });
-                }
-            }
-        );
+        return $this;
     }
 
     public function dispatch() : ResponseInterface

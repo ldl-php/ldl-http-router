@@ -3,6 +3,11 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
+use LDL\Http\Router\Guard\RouterGuardCollection;
+use LDL\Http\Router\Guard\RouterGuardInterface;
+use LDL\Http\Router\Route\Cache\RouteCacheManager;
+use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Parameter\ParameterCollection;
 
 class RouteConfig implements \JsonSerializable
 {
@@ -24,7 +29,7 @@ class RouteConfig implements \JsonSerializable
     /**
      * @var string
      */
-    private $description = '';
+    private $description;
 
     /**
      * @var string
@@ -32,28 +37,78 @@ class RouteConfig implements \JsonSerializable
     private $contentType;
 
     /**
+     * @var string
+     */
+    private $version;
+
+    /**
+     * @var RouterGuardCollection
+     */
+    private $guards;
+
+    /**
+     * @var ParameterCollection
+     */
+    private $parameters;
+
+    /**
+     * @var RouteCacheManager
+     */
+    private $cacheManager;
+
+    /**
+     * @var RouteDispatcherInterface
+     */
+    private $dispatcher;
+
+    /**
      * RouteConfig constructor.
-     *
+     * @param string $version
      * @param string $prefix
-     * @param string $method
-     * @param string $contentType
      * @param string $name
      * @param string $description
+     * @param string $method
+     * @param string $contentType
+     * @param RouteDispatcherInterface $dispatcher
+     * @param RouteCacheManager $cacheManager
+     * @param ParameterCollection|null $parameters
+     * @param RouterGuardCollection|null $guards
      * @throws Exception\InvalidHttpMethodException
      */
     public function __construct(
+        string $version,
         string $prefix,
+        string $name,
+        string $description,
         string $method,
         string $contentType,
-        string $name='',
-        string $description=''
+        RouteDispatcherInterface $dispatcher,
+        RouteCacheManager $cacheManager=null,
+        ParameterCollection $parameters=null,
+        RouterGuardCollection $guards=null
     )
     {
         $this->setPrefix($prefix)
         ->setMethod($method)
         ->setContentType($contentType)
         ->setName($name)
-        ->setDescription($description);
+        ->setDescription($description)
+        ->setVersion($version)
+        ->setDispatcher($dispatcher)
+        ->setCacheManager($cacheManager)
+        ->setParameters($parameters ?? new ParameterCollection())
+        ->setGuards($guards ?? new RouterGuardCollection());
+    }
+
+    public function addGuard(RouterGuardInterface $guard) : self
+    {
+        $guards = $this->guards ?? new RouterGuardCollection();
+
+        $guards->append($guard);
+
+        $this->guards = $guards;
+
+        return $this;
     }
 
     /**
@@ -97,12 +152,43 @@ class RouteConfig implements \JsonSerializable
         return $this->description;
     }
 
+    public function getVersion() : string
+    {
+        return $this->version;
+    }
+
+    public function getDispatcher() : RouteDispatcherInterface
+    {
+        return $this->dispatcher;
+    }
+
     /**
      * @return string
      */
     public function getContentType() : string
     {
         return $this->contentType;
+    }
+
+    /**
+     * @return RouterGuardCollection|null
+     */
+    public function getGuards() : ?RouterGuardCollection
+    {
+        return $this->guards;
+    }
+
+    /**
+     * @return ParameterCollection|null
+     */
+    public function getParameters() : ?ParameterCollection
+    {
+        return $this->parameters;
+    }
+
+    public function getCacheManager() : ?RouteCacheManager
+    {
+        return $this->cacheManager;
     }
 
     //Private methods
@@ -152,6 +238,36 @@ class RouteConfig implements \JsonSerializable
     private function setDescription(string $description) : self
     {
         $this->description = $description;
+        return $this;
+    }
+
+    private function setVersion(string $version) : self
+    {
+        $this->version = $version;
+        return $this;
+    }
+
+    private function setCacheManager(RouteCacheManager $cacheManager=null) : self
+    {
+        $this->cacheManager = $cacheManager;
+        return $this;
+    }
+
+    private function setDispatcher(RouteDispatcherInterface $dispatcher) : self
+    {
+        $this->dispatcher = $dispatcher;
+        return $this;
+    }
+
+    private function setParameters(ParameterCollection $parameterCollection=null) : self
+    {
+        $this->parameters = $parameterCollection;
+        return $this;
+    }
+
+    private function setGuards(RouterGuardCollection $guards=null) : self
+    {
+        $this->guards = $guards;
         return $this;
     }
 
