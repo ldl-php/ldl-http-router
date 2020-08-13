@@ -4,8 +4,7 @@ namespace LDL\Http\Router;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Group\RouteCollection;
-use LDL\Http\Router\Route\Group\RouteGroup;
+use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
@@ -56,7 +55,7 @@ class Router
         $response = $this->response;
 
         $config = $route->getConfig();
-        $method = $config->getMethod();
+        $method = $config->getRequestMethod();
 
         if(!method_exists($this->collector, $method)){
             $msg = sprintf(
@@ -120,6 +119,11 @@ class Router
 
             $this->response->setContent($e->getMessage());
             $this->response->setStatusCode(ResponseInterface::HTTP_CODE_NOT_FOUND);
+
+        }catch(InvalidContentTypeException $e){
+
+            $this->response->setContent($e->getMessage());
+            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED);
 
         }
 

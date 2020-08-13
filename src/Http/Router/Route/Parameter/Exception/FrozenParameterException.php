@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Route\Parameter\Exception;
 
-class NoTransformerSpecifiedException extends ParameterException
+class FrozenParameterException extends ParameterException
 {
 
 }

@@ -2,8 +2,6 @@
 
 namespace LDL\Http\Router\Route\Parameter;
 
-use Swaggest\JsonSchema\Schema;
-
 interface ParameterInterface
 {
     /**
@@ -12,24 +10,20 @@ interface ParameterInterface
     public function getName() : string;
 
     /**
-     * @return string
+     * @param $value
+     * @return ParameterInterface
      */
-    public function getDescription() : string;
+    public function setValue($value) : ParameterInterface;
 
     /**
-     * @return Schema|null
-     */
-    public function getSchema() : ?Schema;
-
-    /**
-     * @param mixed $value
+     * @param bool $cache
      * @return mixed
      */
-    public function getTransformedValue($value);
+    public function getConvertedValue(bool $cache=true);
 
     /**
-     * @return bool
+     * @return mixed
      */
-    public function isRequired() : bool;
+    public function getValue();
 
 }

@@ -2,8 +2,6 @@
 
 namespace LDL\Http\Router\Route\Parameter;
 
-use Swaggest\JsonSchema\Schema;
-
 class Parameter implements ParameterInterface
 {
     /**
@@ -12,98 +10,97 @@ class Parameter implements ParameterInterface
     private $name;
 
     /**
-     * @var string
+     * @var mixed
      */
-    private $description;
-
-    /**
-     * @var Schema
-     */
-    private $schema;
-
-    /**
-     * @var string|null
-     */
-    private $defaultValue;
+    private $value;
 
     /**
      * @var bool
      */
-    private $calledCallable;
+    private $calledConverter;
 
     /**
      * @var callable
      */
-    private $transformer;
+    private $converter;
 
     /**
      * @var mixed
      */
-    private $transformedValue;
+    private $convertedValue;
 
     /**
      * @var bool
      */
-    private $required;
+    private $isFrozen = false;
 
-    public function __construct(
-        string $name,
-        bool $required,
-        string $defaultValue=null,
-        string $description='',
-        callable $transformer=null,
-        Schema $schema = null
-    )
+    public function __construct(string $name)
     {
         $this->name = $name;
-        $this->description = $description;
-        $this->schema = $schema;
-        $this->required = $required;
-        $this->transformer = $transformer;
-        $this->defaultValue = $defaultValue;
     }
 
-    public function getName(): string
+    public function freeze() : ParameterInterface
+    {
+        $this->isFrozen = true;
+        return $this;
+    }
+
+    public function setConverter(ParameterConverterInterface $converter) : ParameterInterface
+    {
+        $this->checkFrozenState();
+        $this->converter = $converter;
+        return $this;
+    }
+
+    public function getName() : string
     {
         return $this->name;
     }
 
-    public function getDescription(): string
+    public function setValue($value) : ParameterInterface
     {
-        return $this->description;
+        $this->checkFrozenState();
+        $this->value = $value;
+        return $this;
     }
 
-    public function getSchema() : ?Schema
+    /**
+     * @return mixed
+     */
+    public function getValue()
     {
-        return $this->schema;
+        return $this->value;
     }
 
-    public function getDefaultValue() : ?string
+    public function getConvertedValue(bool $cache=true)
     {
-        return $this->defaultValue;
-    }
+        if($this->calledConverter && $cache){
+            return $this->convertedValue;
+        }
 
-    public function getTransformedValue($value)
-    {
-        if(null === $this->transformer){
+        if(null === $this->converter){
             $msg = sprintf(
-              'Parameter with name: "%s", has no value transformer specified',
+              'Parameter with name: "%s", has no value converter specified',
                 $this->name
             );
 
-            throw new Exception\NoTransformerSpecifiedException($msg);
+            throw new Exception\NoConverterSpecifiedException($msg);
         }
 
-        if($this->calledCallable){
-            return $this->transformedValue;
-        }
-
-        return $this->transformedValue = ($this->transformer)($value);
+        $this->convertedValue = $this->converter->convert($this);
+        $this->calledConverter = true;
+        return $this->convertedValue;
     }
 
-    public function isRequired() : bool
+    private function checkFrozenState()
     {
-        return $this->required;
+        if(false === $this->isFrozen){
+            return;
+        }
+
+        $msg = "Parameter named \"{$this->name}\" is frozen, state can not be changed";
+
+        throw new Exception\FrozenParameterException($msg);
     }
 
 }

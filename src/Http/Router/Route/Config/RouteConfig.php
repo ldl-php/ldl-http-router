@@ -8,6 +8,8 @@ use LDL\Http\Router\Guard\RouterGuardInterface;
 use LDL\Http\Router\Route\Cache\RouteCacheManager;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
+use Swaggest\JsonSchema\SchemaContract;
+use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
 {
@@ -17,9 +19,19 @@ class RouteConfig implements \JsonSerializable
     private $prefix;
 
     /**
+     * @var SchemaContract
+     */
+    private $headerSchema;
+
+    /**
+     * @var SchemaContract
+     */
+    private $bodySchema;
+
+    /**
      * @var string
      */
-    private $method;
+    private $requestMethod;
 
     /**
      * @var string
@@ -34,11 +46,6 @@ class RouteConfig implements \JsonSerializable
     /**
      * @var string
      */
-    private $contentType;
-
-    /**
-     * @var string
-     */
     private $version;
 
     /**
@@ -49,7 +56,7 @@ class RouteConfig implements \JsonSerializable
     /**
      * @var ParameterCollection
      */
-    private $parameters;
+    private $requestParameters;
 
     /**
      * @var RouteCacheManager
@@ -62,41 +69,36 @@ class RouteConfig implements \JsonSerializable
     private $dispatcher;
 
     /**
-     * RouteConfig constructor.
-     * @param string $version
-     * @param string $prefix
-     * @param string $name
-     * @param string $description
-     * @param string $method
-     * @param string $contentType
-     * @param RouteDispatcherInterface $dispatcher
-     * @param RouteCacheManager $cacheManager
-     * @param ParameterCollection|null $parameters
-     * @param RouterGuardCollection|null $guards
-     * @throws Exception\InvalidHttpMethodException
+     * @var string
      */
+    private $responseContentType;
+
     public function __construct(
+        string $method,
         string $version,
         string $prefix,
         string $name,
         string $description,
-        string $method,
-        string $contentType,
+        string $responseContentType,
         RouteDispatcherInterface $dispatcher,
-        RouteCacheManager $cacheManager=null,
-        ParameterCollection $parameters=null,
-        RouterGuardCollection $guards=null
+        ParameterCollection $requestParameters=null,
+        SchemaContract $requestHeaderSchema = null,
+        SchemaContract $bodySchema = null,
+        RouterGuardCollection $guards=null,
+        RouteCacheManager $cacheManager=null
     )
     {
         $this->setPrefix($prefix)
-        ->setMethod($method)
-        ->setContentType($contentType)
         ->setName($name)
-        ->setDescription($description)
         ->setVersion($version)
+        ->setRequestMethod($method)
+        ->setResponseContentType($responseContentType)
+        ->setRequestHeaderSchema($requestHeaderSchema)
+        ->setRequestBodySchema($bodySchema)
+        ->setDescription($description)
         ->setDispatcher($dispatcher)
         ->setCacheManager($cacheManager)
-        ->setParameters($parameters ?? new ParameterCollection())
+        ->setParameters($requestParameters)
         ->setGuards($guards ?? new RouterGuardCollection());
     }
 
@@ -111,11 +113,6 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    /**
-     * @param array $config
-     * @return RouteConfig
-     * @throws Exception\InvalidHttpMethodException
-     */
     public static function fromArray(array $config) : self
     {
         $merge = array_merge(get_class_vars(__CLASS__), $config);
@@ -132,42 +129,44 @@ class RouteConfig implements \JsonSerializable
         return $this->toArray();
     }
 
+    /**
+     * @return string
+     */
     public function getPrefix() : string
     {
         return $this->prefix;
     }
 
-    public function getMethod() : string
-    {
-        return $this->method;
-    }
-
+    /**
+     * @return string
+     */
     public function getName() : string
     {
         return $this->name;
     }
 
+    /**
+     * @return string
+     */
     public function getDescription() : string
     {
         return $this->description;
     }
 
+    /**
+     * @return string
+     */
     public function getVersion() : string
     {
         return $this->version;
     }
 
+    /**
+     * @return RouteDispatcherInterface
+     */
     public function getDispatcher() : RouteDispatcherInterface
     {
         return $this->dispatcher;
-    }
-
-    /**
-     * @return string
-     */
-    public function getContentType() : string
-    {
-        return $this->contentType;
     }
 
     /**
@@ -179,59 +178,99 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return ParameterCollection|null
+     * @return string
      */
-    public function getParameters() : ?ParameterCollection
+    public function getRequestMethod() : string
     {
-        return $this->parameters;
+        return $this->requestMethod;
     }
 
+    /**
+     * @return string
+     */
+    public function getResponseContentType() : string
+    {
+        return $this->responseContentType;
+    }
+
+    /**
+     * @return SchemaContract|null
+     */
+    public function getHeaderSchema() : ?SchemaContract
+    {
+        return $this->headerSchema;
+    }
+
+    /**
+     * @return ParameterCollection|null
+     */
+    public function getRequestParameters() : ?ParameterCollection
+    {
+        return $this->requestParameters;
+    }
+
+    /**
+     * @return RouteCacheManager|null
+     */
     public function getCacheManager() : ?RouteCacheManager
     {
         return $this->cacheManager;
     }
 
-    //Private methods
-
     /**
-     * Must be called after setPrefix
-     *
-     * @param string $method
-     * @return RouteConfig
-     * @throws Exception\InvalidHttpMethodException
+     * @return SchemaContract|null
      */
-    private function setMethod(string $method) : self
+    public function getBodySchema() : ?SchemaContract
     {
-        if(RequestHelper::isHttpMethodValid(strtoupper($method))){
-            $this->method = $method;
-            return $this;
-        }
-
-        $msg = sprintf(
-            'Invalid method specified: "%s" for route with prefix: "%s", valid methods are: "%s"',
-            $method,
-            $this->prefix,
-            implode(', ', RequestHelper::getAvailableHttpMethods())
-        );
-
-        throw new Exception\InvalidHttpMethodException($msg);
+        return $this->bodySchema;
     }
 
-    private function setContentType(string $contentType) : self
-    {
-        $this->contentType = $contentType;
-        return $this;
-    }
+    //Private methods
 
     private function setName(string $name) : self
     {
+        $name = new UnicodeString($name);
+        $name = (string)$name->trim();
+
+        if('' === $name){
+            $msg = "Route name can not be empty";
+            throw new Exception\InvalidRouteNameException($msg);
+        }
+
         $this->name = $name;
+        return $this;
+    }
+
+    private function setRequestBodySchema(SchemaContract $schema=null) : self
+    {
+        $this->bodySchema = $schema;
+        return $this;
+    }
+
+    private function setRequestHeaderSchema(SchemaContract $schema=null) : self
+    {
+        $this->headerSchema = $schema;
+        return $this;
+    }
+
+    private function setResponseContentType(string $type) : self
+    {
+        $this->responseContentType = $type;
         return $this;
     }
 
     private function setPrefix(string $prefix) : self
     {
+        $prefix = new UnicodeString($prefix);
+        $prefix = (string)$prefix->trim();
+
+        if('' === $prefix){
+            $msg = "Route prefix can not be empty";
+            throw new Exception\InvalidRoutePrefixException($msg);
+        }
+
         $this->prefix = $prefix;
+
         return $this;
     }
 
@@ -243,6 +282,13 @@ class RouteConfig implements \JsonSerializable
 
     private function setVersion(string $version) : self
     {
+        $version = trim($version);
+
+        if('' === $version){
+            $msg = "Route version can not be empty";
+            throw new Exception\InvalidRoutePrefixException($msg);
+        }
+
         $this->version = $version;
         return $this;
     }
@@ -261,7 +307,7 @@ class RouteConfig implements \JsonSerializable
 
     private function setParameters(ParameterCollection $parameterCollection=null) : self
     {
-        $this->parameters = $parameterCollection;
+        $this->requestParameters = $parameterCollection;
         return $this;
     }
 
@@ -271,4 +317,27 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
+    /**
+     * Must be called after setPrefix
+     *
+     * @param string $method
+     * @return RouteConfig
+     * @throws Exception\InvalidHttpMethodException
+     */
+    private function setRequestMethod(string $method) : self
+    {
+        if(RequestHelper::isHttpMethodValid(strtoupper($method))){
+            $this->requestMethod = $method;
+            return $this;
+        }
+
+        $msg = sprintf(
+            'Invalid method specified: "%s" for route with prefix: "%s", valid methods are: "%s"',
+            $method,
+            $this->prefix,
+            implode(', ', RequestHelper::getAvailableHttpMethods())
+        );
+
+        throw new Exception\InvalidHttpMethodException($msg);
+    }
 }

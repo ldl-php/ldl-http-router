@@ -17,15 +17,27 @@ class RouteCacheConfig
     /**
      * @var bool
      */
-    private $isPurgeable;
+    private $purgeable;
 
     /**
      * @var bool
      */
-    private $enabled;
+    private $enabled=true;
+
+    public static function fromArray(array $data) : self
+    {
+        $merge = array_merge(get_class_vars(__CLASS__), $data);
+
+        return new static(
+            (bool) $merge['purgeable'],
+            (bool) $merge['enabled'],
+            $merge['expiresAt'],
+            $merge['secretKey']
+        );
+    }
 
     public function __construct(
-        bool $isPurgeable,
+        bool $purgeable,
         bool $enabled=true,
         ?string $expiresAt=null,
         ?string $secretKey=null
@@ -35,10 +47,10 @@ class RouteCacheConfig
             $expiresAt = \DateInterval::createFromDateString($expiresAt);
         }
 
-        $this->enabled = $enabled;
-        $this->secretKey = $secretKey;
-        $this->expiresAt = $expiresAt;
-        $this->isPurgeable = $isPurgeable;
+        $this->setEnabled($enabled)
+            ->setExpiresAt($expiresAt)
+            ->setSecretKey($secretKey)
+            ->setPurgeable($purgeable);
     }
 
     /**
@@ -59,12 +71,36 @@ class RouteCacheConfig
 
     public function isPurgeable() : bool
     {
-        return $this->isPurgeable;
+        return $this->purgeable;
     }
 
     public function isEnabled() : bool
     {
         return $this->enabled;
+    }
+
+    private function setEnabled(bool $enabled) : self
+    {
+        $this->enabled = $enabled;
+        return $this;
+    }
+
+    private function setPurgeable(bool $purgeable) : self
+    {
+        $this->purgeable = $purgeable;
+        return $this;
+    }
+
+    private function setExpiresAt(\DateInterval $interval) : self
+    {
+        $this->expiresAt = $interval;
+        return $this;
+    }
+
+    private function setSecretKey(string $key=null) : self
+    {
+        $this->secretKey = $key;
+        return $this;
     }
 
 }

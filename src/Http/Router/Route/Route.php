@@ -34,26 +34,13 @@ class Route implements RouteInterface
     {
         $config = $this->config;
 
-        $requestParameters = (object)$request->getQuery()->all();
+        $this->parseRequestParameterSchema($request, $response);
+        $this->parseRequestHeaderSchema($request, $response);
+        $this->parseRequestBodySchema($request, $response);
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_BEFORE);
 
-        $schema = null;
         $cacheManager = $config->getCacheManager();
-        $params = $config->getParameters();
-
-        if($params){
-            $schema = $params->getSchema() ?? $params->getParametersSchema();
-
-            try{
-                $context = new Context();
-                $context->tolerateStrings = true;
-                $schema->in($requestParameters, $context);
-            }catch(\Exception $e){
-                $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-                throw new InvalidParameterException($e->getMessage());
-            }
-        }
 
         if($cacheManager){
             $cacheHit = $cacheManager->has($config->getDispatcher(), $request, $response);
@@ -66,14 +53,18 @@ class Route implements RouteInterface
         $result = $config->getDispatcher()->dispatch(
             $request,
             $response,
-            $config->getParameters()
+            $config->getRequestParameters()
         );
 
-        if(null !== $result){
-            $response->setContent(
-                $this->config->getContentType() === 'application/json' ? json_encode($result) : $result
-            );
+        $response->getHeaderBag()->set('Content-Type', $config->getResponseContentType());
+
+        $isJson = preg_match('#application/json.*#', $config->getResponseContentType());
+
+        if($isJson){
+            $result = json_encode($result);
         }
+
+        $response->setContent($result);
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
 
@@ -83,6 +74,103 @@ class Route implements RouteInterface
     }
 
     // Private methods
+
+    private function parseRequestHeaderSchema(RequestInterface $request, ResponseInterface $response) : void
+    {
+        $headerSchema = $this->config->getHeaderSchema();
+
+        if(!$headerSchema) {
+            return;
+        }
+
+        try{
+            $context = new Context();
+            $context->tolerateStrings = true;
+
+            $headers = [];
+            foreach($request->getHeaderBag()->getIterator() as $name => $value){
+                $headers[$name] = is_array($value) ? $value[0] : $value;
+            }
+
+            $headerSchema->in(
+                (object) $headers,
+                $context
+            );
+        }catch(\Exception $e){
+            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+            throw new InvalidParameterException($e->getMessage());
+        }
+    }
+
+    private function parseRequestBodySchema(RequestInterface $request, ResponseInterface $response) : void
+    {
+        $bodySchema = $this->config->getBodySchema();
+
+        if(!$bodySchema) {
+            return;
+        }
+
+        $content = $response->getContent() ? $response->getContent() : '[]';
+
+        try{
+            $content = json_decode($content,false,null,\JSON_THROW_ON_ERROR);
+
+            $context = new Context();
+            $context->tolerateStrings = true;
+
+            $bodySchema->in(
+                $content,
+                $context
+            );
+        }catch(\Exception $e){
+            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+            throw new InvalidParameterException($e->getMessage());
+        }
+    }
+
+    private function parseRequestParameterSchema(RequestInterface $request, ResponseInterface $response) : void
+    {
+        $requestParameters = (object) $request->getQuery()->all();
+
+        $params = $this->config->getRequestParameters();
+
+        if(null === $params){
+            return;
+        }
+
+        $schema = $params->getSchema();
+
+        foreach($schema->getProperties()->toArray() as $name => $param){
+            $default = null;
+
+            if(null !== $schema) {
+                $default = $schema->getProperties()->$name->getDefault();
+            }
+
+            if(!isset($requestParameters->$name) && $default){
+                $requestParameters->$name = $default;
+            }
+
+            $params->get($name)->setValue(isset($requestParameters->$name) ? $requestParameters->$name : null);
+        }
+
+        $params->freezeParameters();
+
+        if(null === $schema){
+            return;
+        }
+
+
+        try{
+            $context = new Context();
+            $context->tolerateStrings = true;
+            $schema->in($requestParameters, $context);
+        }catch(\Exception $e){
+            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+            throw new InvalidParameterException($e->getMessage());
+        }
+
+    }
 
     /**
      * @param RequestInterface $request
@@ -105,7 +193,7 @@ class Route implements RouteInterface
          * @var RouterGuardInterface $guard
          */
         foreach($guards->filterByType($guardType) as $guard){
-            $guard->validate($request, $response, $this->config->getParameters());
+            $guard->validate($request, $response, $this->config->getRequestParameters());
         }
 
     }
