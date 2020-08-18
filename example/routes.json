@@ -2,7 +2,14 @@
   "routes": [
     {
       "version": "1.0",
-      "prefix": "list",
+      "url": {
+        "prefix": "list/{urlName}",
+        "parameters": {
+          "schema": {
+            "repository": "url-parameters.schema"
+          }
+        }
+      },
       "name": "test",
       "description": "A test route",
       "dispatcher": {
@@ -12,12 +19,12 @@
         "method": "get",
         "headers": {
           "schema": {
-            "repository": "headers.schema"
+            "repository": "header-parameters.schema"
           }
         },
         "parameters": {
           "schema": {
-            "repository": "parameters.schema"
+            "repository": "request-parameters.schema"
           }
         }
       },

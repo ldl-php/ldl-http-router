@@ -73,6 +73,11 @@ class RouteConfig implements \JsonSerializable
      */
     private $responseContentType;
 
+    /**
+     * @var ParameterCollection
+     */
+    private $urlParameters;
+
     public function __construct(
         string $method,
         string $version,
@@ -82,6 +87,7 @@ class RouteConfig implements \JsonSerializable
         string $responseContentType,
         RouteDispatcherInterface $dispatcher,
         ParameterCollection $requestParameters=null,
+        ParameterCollection $urlParameters = null,
         SchemaContract $requestHeaderSchema = null,
         SchemaContract $bodySchema = null,
         RouterGuardCollection $guards=null,
@@ -99,6 +105,7 @@ class RouteConfig implements \JsonSerializable
         ->setDispatcher($dispatcher)
         ->setCacheManager($cacheManager)
         ->setParameters($requestParameters)
+        ->setUrlParameters($urlParameters)
         ->setGuards($guards ?? new RouterGuardCollection());
     }
 
@@ -225,6 +232,11 @@ class RouteConfig implements \JsonSerializable
         return $this->bodySchema;
     }
 
+    public function getUrlParameters() : ?ParameterCollection
+    {
+        return $this->urlParameters;
+    }
+
     //Private methods
 
     private function setName(string $name) : self
@@ -308,6 +320,12 @@ class RouteConfig implements \JsonSerializable
     private function setParameters(ParameterCollection $parameterCollection=null) : self
     {
         $this->requestParameters = $parameterCollection;
+        return $this;
+    }
+
+    private function setUrlParameters(ParameterCollection $parameterCollection=null) : self
+    {
+        $this->urlParameters = $parameterCollection;
         return $this;
     }
 

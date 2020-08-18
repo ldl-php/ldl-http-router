@@ -8,6 +8,7 @@ use LDL\Http\Router\Guard\RouterGuardInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 
+use Phroute\Phroute\RouteParser;
 use Swaggest\JsonSchema\Context;
 
 class Route implements RouteInterface
@@ -33,15 +34,22 @@ class Route implements RouteInterface
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
+     * @param array $urlArgs
+     *
      * @throws InvalidParameterException
      */
-    public function dispatch(RequestInterface $request, ResponseInterface $response) : void
+    public function dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $urlArgs = []
+    ) : void
     {
         $config = $this->config;
 
         $this->parseRequestParameterSchema($request, $response);
         $this->parseRequestHeaderSchema($request, $response);
         $this->parseRequestBodySchema($request, $response);
+        $this->parseRequestUrlSchema($request, $response, $urlArgs);
 
         $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_BEFORE);
 
@@ -58,7 +66,8 @@ class Route implements RouteInterface
         $result = $config->getDispatcher()->dispatch(
             $request,
             $response,
-            $config->getRequestParameters()
+            $config->getRequestParameters(),
+            $config->getUrlParameters()
         );
 
         $response->getHeaderBag()->set('Content-Type', $config->getResponseContentType());
@@ -79,6 +88,50 @@ class Route implements RouteInterface
     }
 
     // Private methods
+    private function parseRequestUrlSchema(
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $args = []
+    ) : void
+    {
+        if(null === $this->config->getUrlParameters()){
+            return;
+        }
+
+        if(null === $this->config->getUrlParameters()->getSchema()){
+            return;
+        }
+
+        $parser = new RouteParser();
+        $parsed = $parser->parse($this->config->getPrefix());
+
+        $variableParameters = [];
+
+        foreach($parsed[1] as $part){
+            if(false === $part['variable']){
+                continue;
+            }
+
+            $variableParameters[$part['name']] = current($args);
+            next($args);
+        }
+
+        $schema = $this->config->getUrlParameters()->getSchema();
+
+        try{
+            $context = new Context();
+            $context->tolerateStrings = true;
+
+            $schema->in(
+                (object) $variableParameters,
+                $context
+            );
+        }catch(\Exception $e){
+            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
+            throw new InvalidParameterException($e->getMessage());
+        }
+
+    }
 
     private function parseRequestHeaderSchema(RequestInterface $request, ResponseInterface $response) : void
     {

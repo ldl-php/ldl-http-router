@@ -8,7 +8,6 @@ use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
-use LDL\Http\Router\Schema\SchemaRepository;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
@@ -80,8 +79,8 @@ class Router
             }
         }
 
-        $this->collector->$method($path, static function () use ($route, $request, $response) {
-            $route->dispatch($request, $response);
+        $this->collector->$method($path, static function () use ($route, $request, $response, $path) {
+            $route->dispatch($request, $response, func_get_args());
         });
 
         return $this;

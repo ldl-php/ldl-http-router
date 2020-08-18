@@ -71,15 +71,21 @@ class RouteFactory
                 throw new Exception\SectionNotFoundException($msg);
             }
 
+            if(!array_key_exists('url', $route)){
+                $msg = "\"url\" section not found in route definition";
+                throw new Exception\SectionNotFoundException($msg);
+            }
+
             $config = new RouteConfig(
                 array_key_exists('method' , $route['request']) ? $route['request']['method'] : '',
                 array_key_exists('version' , $route) ? $route['version'] : '',
-                array_key_exists('prefix' , $route) ? $route['prefix'] : '',
+                self::getUrlPrefix($route),
                 array_key_exists('name' , $route) ? $route['name'] : '',
                 array_key_exists('description' , $route) ? $route['description'] : '',
                 array_key_exists('contentType', $route['response']) ? $route['response']['contentType'] : '',
                 self::getDispatcher($route, $container),
                 self::getParameters($route, $container, $schemaRepo),
+                self::getUrlParameters($route, $container, $schemaRepo),
                 self::getRequestHeaderSchema($route, $schemaRepo),
                 self::getRequestBodySchema($route, $schemaRepo),
                 self::getGuards($route, $container),
@@ -90,6 +96,19 @@ class RouteFactory
         }
 
         return $collection;
+    }
+
+    private static function getUrlPrefix(array $route) : string
+    {
+        if(!array_key_exists('prefix', $route['url'])){
+            throw new Exception\SchemaException("\"prefix\" not found in url section");
+        }
+
+        if(!is_string($route['url']['prefix'])){
+            throw new Exception\SchemaException("\"prefix\" parameter must be a string, in url section");
+        }
+
+        return $route['url']['prefix'];
     }
 
     private static function getCacheManager(array $route, ContainerInterface $container=null) : ?RouteCacheManager
@@ -190,6 +209,34 @@ class RouteFactory
             $schemaRepo
         );
 
+        return self::parseSchema($schema, $container);
+    }
+
+    private static function getUrlParameters(
+        array $route,
+        ContainerInterface $container=null,
+        SchemaRepositoryInterface $schemaRepo=null
+    )
+    {
+        if(false === array_key_exists('parameters', $route['url'])){
+            return null;
+        }
+
+        if(false === array_key_exists('schema', $route['url']['parameters'])){
+            return null;
+        }
+
+        $schema = self::getSchema(
+            $route['url']['parameters']['schema'],
+            'parameters',
+            $schemaRepo
+        );
+
+        return self::parseSchema($schema, $container);
+    }
+
+    private static function parseSchema($schema, ContainerInterface $container=null)
+    {
         $schema = json_decode(json_encode($schema),true);
         $parameters = [];
 

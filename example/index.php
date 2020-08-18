@@ -51,8 +51,9 @@ class NameTransformer implements ParameterConverterInterface{
 
 $schemaRepo = new SchemaRepository();
 
-$schemaRepo->append('./schema/header-schema.json', 'headers.schema');
-$schemaRepo->append('./schema/parameter-schema.json', 'parameters.schema');
+$schemaRepo->append('./schema/header-schema.json', 'header-parameters.schema');
+$schemaRepo->append('./schema/parameter-schema.json', 'request-parameters.schema');
+$schemaRepo->append('./schema/url-parameters-schema.json', 'url-parameters.schema');
 
 $routes = RouteFactory::fromJsonFile('./routes.json', null, $schemaRepo);
 $group = new RouteGroup('student', 'student', $routes);

@@ -17,5 +17,9 @@ interface RouteInterface
      */
     public function getConfig() : RouteConfig;
 
-    public function dispatch(RequestInterface $request, ResponseInterface $response) : void;
+    public function dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $urlArgs = []
+    ) : void;
 }
