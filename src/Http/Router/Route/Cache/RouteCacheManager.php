@@ -132,7 +132,8 @@ class RouteCacheManager
         $expires = 0;
 
         if($this->config->getExpiresAt()){
-            $expires = (new \DateTime('now'))->add($this->config->getExpiresAt());
+            $now = new \DateTime('now', new \DateTimeZone('UTC'));
+            $expires = $now->add($this->config->getExpiresAt());
             $item->expiresAfter($this->config->getExpiresAt());
             $response->setExpires($expires);
         }

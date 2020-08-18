@@ -7,10 +7,12 @@ use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
 use LDL\Http\Router\Route\Cache\RouteCacheManager;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Factory\Exception\SchemaException;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Parameter\Parameter;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Schema\SchemaRepositoryInterface;
 use Psr\Container\ContainerInterface;
 use Swaggest\JsonSchema\Schema;
 use Swaggest\JsonSchema\SchemaContract;
@@ -21,24 +23,38 @@ class RouteFactory
 
     public static function fromJsonFile(
         string $file,
-        ContainerInterface $container=null
+        ContainerInterface $container=null,
+        SchemaRepositoryInterface $schemaRepo = null
     ) : RouteCollection
     {
         self::$baseDirectory = dirname($file);
-        return self::fromJson(file_get_contents($file), $container);
+
+        if(!file_exists($file)){
+            $msg = "Schema file: \"$file\" was not found";
+            throw new Exception\SchemaFileError($msg);
+        }
+
+        if(!is_readable($file)){
+            $msg = "Could not read schema file \"$file\", permission denied!";
+            throw new Exception\SchemaFileError($msg);
+        }
+
+        return self::fromJson(file_get_contents($file), $container, $schemaRepo);
     }
 
     public static function fromJson(
         string $json,
-        ContainerInterface $container=null
+        ContainerInterface $container=null,
+        SchemaRepositoryInterface $schemaRepo = null
     ) : RouteCollection
     {
-        return self::fromArray(json_decode($json, true), $container);
+        return self::fromArray(json_decode($json, true), $container, $schemaRepo);
     }
 
     public static function fromArray(
         array $data,
-        ContainerInterface $container=null
+        ContainerInterface $container=null,
+        SchemaRepositoryInterface $schemaRepo=null
     ) : RouteCollection
     {
         $collection = new RouteCollection();
@@ -63,9 +79,9 @@ class RouteFactory
                 array_key_exists('description' , $route) ? $route['description'] : '',
                 array_key_exists('contentType', $route['response']) ? $route['response']['contentType'] : '',
                 self::getDispatcher($route, $container),
-                self::getParameters($route, $container),
-                self::getRequestHeaderSchema($route, $container),
-                self::getRequestBodySchema($route, $container),
+                self::getParameters($route, $container, $schemaRepo),
+                self::getRequestHeaderSchema($route, $schemaRepo),
+                self::getRequestBodySchema($route, $schemaRepo),
                 self::getGuards($route, $container),
                 self::getCacheManager($route, $container)
             );
@@ -156,7 +172,8 @@ class RouteFactory
 
     private static function getParameters(
         array $route,
-        ContainerInterface $container=null
+        ContainerInterface $container=null,
+        SchemaRepositoryInterface $schemaRepo=null
     ) : ?ParameterCollection
     {
         if(false === array_key_exists('parameters', $route['request'])){
@@ -167,7 +184,12 @@ class RouteFactory
             return null;
         }
 
-        $schema = self::getSchema($route['request']['parameters']['schema'], 'parameters');
+        $schema = self::getSchema(
+            $route['request']['parameters']['schema'],
+            'parameters',
+            $schemaRepo
+        );
+
         $schema = json_decode(json_encode($schema),true);
         $parameters = [];
 
@@ -228,7 +250,7 @@ class RouteFactory
         return $collection;
     }
 
-    private static function getRequestBodySchema(array $route) : ?SchemaContract
+    private static function getRequestBodySchema(array $route, SchemaRepositoryInterface $schemaRepo=null) : ?SchemaContract
     {
         if(!array_key_exists('body', $route['request'])){
             return null;
@@ -238,10 +260,10 @@ class RouteFactory
             return null;
         }
 
-        return self::getSchema($route['request']['body']['schema'], 'body');
+        return self::getSchema($route['request']['body']['schema'], 'body', $schemaRepo);
     }
 
-    private static function getRequestHeaderSchema(array $route) : ?SchemaContract
+    private static function getRequestHeaderSchema(array $route, SchemaRepositoryInterface $schemaRepo=null) : ?SchemaContract
     {
         if(!array_key_exists('headers', $route['request'])){
             return null;
@@ -251,7 +273,7 @@ class RouteFactory
             return null;
         }
 
-        return self::getSchema($route['request']['headers']['schema'], 'headers');
+        return self::getSchema($route['request']['headers']['schema'], 'headers', $schemaRepo);
     }
 
     private static function getDispatcher(array $route, ContainerInterface $container=null) : RouteDispatcherInterface
@@ -276,36 +298,43 @@ class RouteFactory
         throw new Exception\DispatcherNotFoundException("No dispatcher was specified");
     }
 
-    private static function getSchema($schema, string $section) : ?SchemaContract
+    private static function getSchema(
+        $schema,
+        string $section,
+        SchemaRepositoryInterface $schemaRepo=null
+    ) : ?SchemaContract
     {
-        if(is_string($schema)){
-            if(!is_readable($schema)){
-                $msg = "Could not read schema file: \"$schema\", permission denied";
-                throw new Exception\SchemaFileError($msg);
-            }
-
-            if(!file_exists($schema)){
-                $msg = "Could not read schema file: \"$schema\", file does not exists";
-                throw new Exception\SchemaFileError($msg);
-            }
-
-            $schema = file_get_contents($schema);
-
-            $schema = json_decode(
-                $schema,
-                null,
-                512,
-                \JSON_THROW_ON_ERROR
-            );
-        }
 
         if(!is_array($schema)){
-            throw new Exception\SchemaException("Invalid $section schema");
+            $msg = "No schema specification, in section: \"$section\", must specify repository or inline";
+            throw new Exception\SchemaException($msg);
+        }
+
+        $type = strtolower(key($schema));
+
+        switch($type) {
+            case 'repository':
+                if (null === $schemaRepo) {
+                    $msg = "Schema repository specified but no repository was given, in section: $section";
+                    throw new SchemaException($msg);
+                }
+
+                $schemaData = $schemaRepo->getSchema($schema['repository']);
+                break;
+
+            case 'inline':
+                $schemaData = $schema['inline'];
+                break;
+
+            default:
+                $msg = "Bad schema specification: \"$type\", in section: \"$section\", must specify repository or inline";
+                throw new Exception\SchemaException($msg);
+                break;
         }
 
         try {
 
-            return Schema::import(json_decode(json_encode($schema), false));
+            return Schema::import(json_decode(json_encode($schemaData), false));
 
         }catch(\Exception $e){
 

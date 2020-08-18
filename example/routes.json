@@ -1,0 +1,44 @@
+{
+  "routes": [
+    {
+      "version": "1.0",
+      "prefix": "list",
+      "name": "test",
+      "description": "A test route",
+      "dispatcher": {
+        "class": "Dispatch"
+      },
+      "request": {
+        "method": "get",
+        "headers": {
+          "schema": {
+            "repository": "headers.schema"
+          }
+        },
+        "parameters": {
+          "schema": {
+            "repository": "parameters.schema"
+          }
+        }
+      },
+      "response": {
+        "contentType": "application/json",
+        "cache": {
+          "config": {
+            "purgeable": true,
+            "enabled": true,
+            "expiresAt": "10 second"
+          },
+          "adapter": {
+            "class": "Symfony\\Component\\Cache\\Adapter\\FilesystemAdapter",
+            "arguments":{
+              "namespace": "",
+              "defaultLifeTime": 0,
+              "directory": "./cache"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

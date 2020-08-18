@@ -30,6 +30,11 @@ class Route implements RouteInterface
         return clone($this->config);
     }
 
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @throws InvalidParameterException
+     */
     public function dispatch(RequestInterface $request, ResponseInterface $response) : void
     {
         $config = $this->config;
@@ -159,7 +164,6 @@ class Route implements RouteInterface
         if(null === $schema){
             return;
         }
-
 
         try{
             $context = new Context();

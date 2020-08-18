@@ -8,11 +8,11 @@ use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Schema\SchemaRepository;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\Exception\HttpRouteNotFoundException;
-use Symfony\Component\Cache\Adapter\AdapterInterface as CacheAdapterInterface;
 
 class Router
 {
@@ -31,24 +31,24 @@ class Router
      */
     private $response;
 
-    /**
-     * @var CacheAdapterInterface
-     */
-    private $cacheAdapter;
-
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
-        CacheAdapterInterface $cacheAdapter=null,
         RouteCollector $collector=null
     )
     {
         $this->collector = $collector ?? new RouteCollector();
         $this->request = $request;
         $this->response = $response;
-        $this->cacheAdapter = $cacheAdapter;
     }
 
+    /**
+     * @param RouteInterface $route
+     * @param RouteGroupInterface|null $group
+     * @return Router
+     *
+     * @throws Exception\InvalidHttpMethodException
+     */
     public function addRoute(RouteInterface $route, RouteGroupInterface $group=null) : self
     {
         $request  = $this->request;
