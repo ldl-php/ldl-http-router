@@ -8,6 +8,9 @@
           "schema": {
             "repository": "url-parameters.schema"
           }
+        },
+        "authentication": {
+          "type": "basic"
         }
       },
       "name": "test",

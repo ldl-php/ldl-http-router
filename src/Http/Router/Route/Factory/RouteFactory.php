@@ -2,6 +2,8 @@
 
 namespace LDL\Http\Router\Route\Factory;
 
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Guard\RouterGuardCollection;
 use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
 use LDL\Http\Router\Route\Cache\RouteCacheManager;
@@ -24,7 +26,8 @@ class RouteFactory
     public static function fromJsonFile(
         string $file,
         ContainerInterface $container=null,
-        SchemaRepositoryInterface $schemaRepo = null
+        SchemaRepositoryInterface $schemaRepo = null,
+        RouteConfigParserCollection $parserCollection = null
     ) : RouteCollection
     {
         self::$baseDirectory = dirname($file);
@@ -39,22 +42,24 @@ class RouteFactory
             throw new Exception\SchemaFileError($msg);
         }
 
-        return self::fromJson(file_get_contents($file), $container, $schemaRepo);
+        return self::fromJson(file_get_contents($file), $container, $schemaRepo, $parserCollection);
     }
 
     public static function fromJson(
         string $json,
         ContainerInterface $container=null,
-        SchemaRepositoryInterface $schemaRepo = null
+        SchemaRepositoryInterface $schemaRepo = null,
+        RouteConfigParserCollection $parserCollection = null
     ) : RouteCollection
     {
-        return self::fromArray(json_decode($json, true), $container, $schemaRepo);
+        return self::fromArray(json_decode($json, true), $container, $schemaRepo, $parserCollection);
     }
 
     public static function fromArray(
         array $data,
         ContainerInterface $container=null,
-        SchemaRepositoryInterface $schemaRepo=null
+        SchemaRepositoryInterface $schemaRepo=null,
+        RouteConfigParserCollection $parserCollection = null
     ) : RouteCollection
     {
         $collection = new RouteCollection();
@@ -92,7 +97,16 @@ class RouteFactory
                 self::getCacheManager($route, $container)
             );
 
-            $collection->append(new Route($config));
+            $instance = new Route($config);
+
+            /**
+             * @var RouteConfigParserInterface $routeParser
+             */
+            foreach($parserCollection as $routeParser){
+                $routeParser->parse($route, $instance);
+            }
+
+            $collection->append($instance);
         }
 
         return $collection;
