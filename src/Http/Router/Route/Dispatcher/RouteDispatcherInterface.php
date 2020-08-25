@@ -11,6 +11,7 @@ interface RouteDispatcherInterface
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        ParameterCollection $parameters = null
+        ParameterCollection $requestParameters = null,
+        ParameterCollection $urlParameters = null
     );
 }

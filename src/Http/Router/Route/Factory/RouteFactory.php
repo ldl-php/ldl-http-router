@@ -4,9 +4,7 @@ namespace LDL\Http\Router\Route\Factory;
 
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
-use LDL\Http\Router\Guard\RouterGuardCollection;
-use LDL\Http\Router\Route\Cache\Config\RouteCacheConfig;
-use LDL\Http\Router\Route\Cache\RouteCacheManager;
+use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Factory\Exception\SchemaException;
@@ -22,6 +20,7 @@ use Swaggest\JsonSchema\SchemaContract;
 class RouteFactory
 {
     private static $baseDirectory;
+    private static $file;
 
     public static function fromJsonFile(
         string $file,
@@ -30,17 +29,19 @@ class RouteFactory
         RouteConfigParserCollection $parserCollection = null
     ) : RouteCollection
     {
-        self::$baseDirectory = dirname($file);
-
         if(!file_exists($file)){
             $msg = "Schema file: \"$file\" was not found";
             throw new Exception\SchemaFileError($msg);
         }
 
+        self::$file = $file;
+
         if(!is_readable($file)){
             $msg = "Could not read schema file \"$file\", permission denied!";
-            throw new Exception\SchemaFileError($msg);
+            throw new Exception\SchemaFileError(self::exceptionMessage([$msg]));
         }
+
+        self::$baseDirectory = dirname($file);
 
         return self::fromJson(file_get_contents($file), $container, $schemaRepo, $parserCollection);
     }
@@ -52,7 +53,21 @@ class RouteFactory
         RouteConfigParserCollection $parserCollection = null
     ) : RouteCollection
     {
-        return self::fromArray(json_decode($json, true), $container, $schemaRepo, $parserCollection);
+        try {
+            return self::fromArray(
+                json_decode(
+                    $json,
+                    true,
+                    2048,
+                    \JSON_THROW_ON_ERROR
+                ),
+                $container,
+                $schemaRepo,
+                $parserCollection
+            );
+        }catch(\Exception $e){
+            throw new Exception\JsonParseException(self::exceptionMessage([$e->getMessage()]));
+        }
     }
 
     public static function fromArray(
@@ -67,18 +82,18 @@ class RouteFactory
         foreach($data['routes'] as $route){
 
             if(!array_key_exists('request', $route)){
-                $msg = "\"request\" section not found in route definition";
-                throw new Exception\SectionNotFoundException($msg);
+                $msg = '"request" section not found in route definition';
+                throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
             }
 
             if(!array_key_exists('response', $route)){
-                $msg = "\"response\" section not found in route definition";
-                throw new Exception\SectionNotFoundException($msg);
+                $msg = '"response" section not found in route definition';
+                throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
             }
 
             if(!array_key_exists('url', $route)){
-                $msg = "\"url\" section not found in route definition";
-                throw new Exception\SectionNotFoundException($msg);
+                $msg = '"url" section not found in route definition';
+                throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
             }
 
             $config = new RouteConfig(
@@ -93,17 +108,19 @@ class RouteFactory
                 self::getUrlParameters($route, $container, $schemaRepo),
                 self::getRequestHeaderSchema($route, $schemaRepo),
                 self::getRequestBodySchema($route, $schemaRepo),
-                self::getGuards($route, $container),
-                self::getCacheManager($route, $container)
+                self::getMiddleware($route, 'predispatch', $container),
+                self::getMiddleware($route, 'postdispatch', $container)
             );
 
             $instance = new Route($config);
 
-            /**
-             * @var RouteConfigParserInterface $routeParser
-             */
-            foreach($parserCollection as $routeParser){
-                $routeParser->parse($route, $instance);
+            if(null !== $parserCollection) {
+                /**
+                 * @var RouteConfigParserInterface $routeParser
+                 */
+                foreach ($parserCollection as $routeParser) {
+                    $routeParser->parse($route, $instance);
+                }
             }
 
             $collection->append($instance);
@@ -115,39 +132,16 @@ class RouteFactory
     private static function getUrlPrefix(array $route) : string
     {
         if(!array_key_exists('prefix', $route['url'])){
-            throw new Exception\SchemaException("\"prefix\" not found in url section");
+            $msg = '"prefix" not found in url section';
+            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
         }
 
         if(!is_string($route['url']['prefix'])){
-            throw new Exception\SchemaException("\"prefix\" parameter must be a string, in url section");
+            $msg = '"prefix" parameter must be a string, in url section';
+            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
         }
 
         return $route['url']['prefix'];
-    }
-
-    private static function getCacheManager(array $route, ContainerInterface $container=null) : ?RouteCacheManager
-    {
-        if(!array_key_exists('cache', $route['response'])){
-            return null;
-        }
-
-        if(!array_key_exists('config', $route['response']['cache'])){
-            $msg = "config section not found for response cache";
-            throw new Exception\SectionNotFoundException($msg);
-        }
-
-        if(!array_key_exists('adapter', $route['response']['cache'])){
-            $msg = "adapter section not found for response cache";
-            throw new Exception\SectionNotFoundException($msg);
-        }
-
-        $config = RouteCacheConfig::fromArray($route['response']['cache']['config']);
-        $adapter = self::classOrContainer($route['response']['cache']['adapter']);
-
-        return new RouteCacheManager(
-            $adapter,
-            $config
-        );
     }
 
     private static function classOrContainer(array $data, ContainerInterface $container=null)
@@ -156,13 +150,13 @@ class RouteFactory
         $hasContainer = array_key_exists('container', $data);
 
         if(!$hasClass && !$hasContainer){
-            $msg = "class or container section not found";
-            throw new Exception\SectionNotFoundException($msg);
+            $msg = 'Class or container section not found';
+            throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
         }
 
         if($hasContainer && $hasClass){
-            $msg = "Must define class or container, can not define both";
-            throw new Exception\SectionNotFoundException($msg);
+            $msg = 'Must define class or container, can not define both';
+            throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
         }
 
         if($hasClass){
@@ -170,7 +164,7 @@ class RouteFactory
 
             if(!class_exists($className)){
                 $msg = "Class \"$className\" not found";
-                throw new Exception\ClassNotFoundException($msg);
+                throw new Exception\ClassNotFoundException(self::exceptionMessage([$msg]));
             }
 
             $arguments = array_key_exists('arguments', $data) ? $data['arguments'] : [];
@@ -180,27 +174,10 @@ class RouteFactory
 
         if(null === $container){
             $msg = 'Container section specified but no container was passed to this factory';
-            throw new Exception\UndefinedContainerException($msg);
+            throw new Exception\UndefinedContainerException(self::exceptionMessage([$msg]));
         }
 
         return $container->get($data['container']);
-    }
-
-    private static function getGuards(array $route, ContainerInterface $container=null) : ?RouterGuardCollection
-    {
-        if(!array_key_exists('guards', $route)){
-            return null;
-        }
-
-        $guards = $route['guards'];
-        $collection = new RouterGuardCollection();
-
-        foreach($guards as $guard){
-            $guardInstance = self::classOrContainer($guard);
-            $collection->append($guardInstance);
-        }
-
-        return $collection;
     }
 
     private static function getParameters(
@@ -279,12 +256,15 @@ class RouteFactory
                 try {
                     $converterInstance = $container->get($converter['container']);
                 }catch(\Exception $e){
-                    throw new Exception\ConverterNotFoundException($e->getMessage());
+                    throw new Exception\ConverterNotFoundException(
+                        self::exceptionMessage([$e->getMessage()])
+                    );
                 }
             }
 
             if(null === $converterInstance){
-                throw new Exception\ConverterNotFoundException("Converter must specify a class or a container service");
+                $msg = 'Converter must specify a class or a container service';
+                throw new Exception\ConverterNotFoundException(self::exceptionMessage([$msg]));
             }
 
             $parameter->setConverter($converterInstance);
@@ -302,7 +282,7 @@ class RouteFactory
 
         }catch(\Exception $e){
 
-            throw new Exception\SchemaException($e->getMessage());
+            throw new Exception\SchemaException(self::exceptionMessage([$e->getMessage()]));
 
         }
 
@@ -339,24 +319,60 @@ class RouteFactory
 
     private static function getDispatcher(array $route, ContainerInterface $container=null) : RouteDispatcherInterface
     {
-        if(array_key_exists('class', $route['dispatcher'])){
-            if(!class_exists($route['dispatcher']['class'])){
-                $msg = "Could not find dispatcher class: \"{$route['dispatcher']['class']}\"";
-                throw new Exception\DispatcherNotFoundException($msg);
-            }
-
-            return new $route['dispatcher']['class'];
+        if(!array_key_exists('dispatcher', $route)){
+            $msg = 'No dispatcher was specified';
+            throw new Exception\DispatcherNotFoundException(self::exceptionMessage([$msg]));
         }
 
-        if(array_key_exists('container', $route['dispatcher'])){
+        $object = self::classOrContainer($route['dispatcher'], $container);
+
+        if(!$object instanceof RouteDispatcherInterface){
+            $msg = sprintf(
+                'Dispatcher must be an instance of "%s"',
+            RouteDispatcherInterface::class
+            );
+
+            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
+        }
+
+        return $object;
+    }
+
+    private static function getMiddleware(
+        array $route,
+        string $middlewareType,
+        ContainerInterface $container=null
+    ) : ?MiddlewareCollection
+    {
+        if(!array_key_exists($middlewareType, $route)){
+            return null;
+        }
+
+        $middlewareList = $route[$middlewareType];
+
+        if(!is_array($middlewareList)){
+            $msg = sprintf(
+                'Section "%s" must be of type array, "%s" given.',
+                $middlewareType,
+                gettype($middlewareList)
+            );
+
+            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
+        }
+
+        $collection = new MiddlewareCollection();
+
+        foreach($middlewareList as $dispatcher){
+            $instance = self::classOrContainer($dispatcher, $container);
             try {
-                return $container->get($route['dispatcher']['container']);
+                $collection->append($instance);
             }catch(\Exception $e){
-                throw new Exception\DispatcherNotFoundException($e->getMessage());
+
+                throw new Exception\InvalidSectionException(self::exceptionMessage([$e->getMessage()]));
             }
         }
 
-        throw new Exception\DispatcherNotFoundException("No dispatcher was specified");
+        return $collection;
     }
 
     private static function getSchema(
@@ -368,7 +384,7 @@ class RouteFactory
 
         if(!is_array($schema)){
             $msg = "No schema specification, in section: \"$section\", must specify repository or inline";
-            throw new Exception\SchemaException($msg);
+            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
         }
 
         $type = strtolower(key($schema));
@@ -377,7 +393,7 @@ class RouteFactory
             case 'repository':
                 if (null === $schemaRepo) {
                     $msg = "Schema repository specified but no repository was given, in section: $section";
-                    throw new SchemaException($msg);
+                    throw new SchemaException(self::exceptionMessage([$msg]));
                 }
 
                 $schemaData = $schemaRepo->getSchema($schema['repository']);
@@ -389,7 +405,7 @@ class RouteFactory
 
             default:
                 $msg = "Bad schema specification: \"$type\", in section: \"$section\", must specify repository or inline";
-                throw new Exception\SchemaException($msg);
+                throw new Exception\SchemaException(self::exceptionMessage([$msg]));
                 break;
         }
 
@@ -398,11 +414,23 @@ class RouteFactory
             return Schema::import(json_decode(json_encode($schemaData), false));
 
         }catch(\Exception $e){
-
-            throw new Exception\SchemaException("In section: \"$section\", {$e->getMessage()}");
-
+            throw new Exception\SchemaException(
+                self::exceptionMessage([$e->getMessage(), "In section: \"$section\""])
+            );
         }
 
+    }
+    private static function exceptionMessage(array $messages) : string
+    {
+        if(null === self::$file) {
+            return sprintf('%s',implode(', ', $messages));
+        }
+
+        return sprintf(
+            'In file: "%s",%s',
+            self::$file,
+            implode(', ', $messages)
+        );
     }
 }
 

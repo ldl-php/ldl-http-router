@@ -19,6 +19,7 @@ use LDL\Http\Router\Schema\SchemaRepository;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 
 class Dispatch implements RouteDispatcherInterface, CacheableInterface
 {
@@ -34,14 +35,49 @@ class Dispatch implements RouteDispatcherInterface, CacheableInterface
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        ParameterCollection $parameters = null
+        ParameterCollection $parameters = null,
+        ParameterCollection $urlParameters = null
     ) : array
     {
         return [
-            'converted' => $parameters->get('name')->getConvertedValue(),
-            'date' => time(),
-            'description' => 'This response will be cached for 10 seconds!'
+            'converted' => $parameters->get('name')->getConvertedValue()
         ];
+    }
+}
+
+class PreDispatch implements MiddleWareInterface
+{
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    public function getPriority(): int
+    {
+        return 1;
+    }
+
+    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response): void
+    {
+        $response->setContent('a');
+    }
+}
+
+class PostDispatch implements MiddleWareInterface
+{
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    public function getPriority(): int
+    {
+        return 1;
+    }
+
+    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response): void
+    {
+        echo 'b';
     }
 }
 
@@ -56,8 +92,12 @@ class ConfigParser implements RouteConfigParserInterface
 {
     public function parse(array $data, Route $route): void
     {
-        var_dump($data);
-        die();
+        if(!array_key_exists('custom', $data)){
+            return;
+        }
+
+        $route->getConfig()->getPreDispatchMiddleware()->append(new PreDispatch());
+        $route->getConfig()->getPostDispatchMiddleware()->append(new PostDispatch());
     }
 }
 

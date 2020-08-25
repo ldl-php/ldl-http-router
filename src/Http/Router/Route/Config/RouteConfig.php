@@ -3,10 +3,9 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
-use LDL\Http\Router\Guard\RouterGuardCollection;
-use LDL\Http\Router\Guard\RouterGuardInterface;
 use LDL\Http\Router\Route\Cache\RouteCacheManager;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use Swaggest\JsonSchema\SchemaContract;
 use Symfony\Component\String\UnicodeString;
@@ -49,11 +48,6 @@ class RouteConfig implements \JsonSerializable
     private $version;
 
     /**
-     * @var RouterGuardCollection
-     */
-    private $guards;
-
-    /**
      * @var ParameterCollection
      */
     private $requestParameters;
@@ -78,6 +72,16 @@ class RouteConfig implements \JsonSerializable
      */
     private $urlParameters;
 
+    /**
+     * @var MiddlewareCollection
+     */
+    private $preDispatch;
+
+    /**
+     * @var MiddlewareCollection
+     */
+    private $postDispatch;
+
     public function __construct(
         string $method,
         string $version,
@@ -90,8 +94,8 @@ class RouteConfig implements \JsonSerializable
         ParameterCollection $urlParameters = null,
         SchemaContract $requestHeaderSchema = null,
         SchemaContract $bodySchema = null,
-        RouterGuardCollection $guards=null,
-        RouteCacheManager $cacheManager=null
+        MiddlewareCollection $preDispatchMiddleware=null,
+        MiddlewareCollection $postDispatchMiddleware=null
     )
     {
         $this->setPrefix($prefix)
@@ -103,21 +107,10 @@ class RouteConfig implements \JsonSerializable
         ->setRequestBodySchema($bodySchema)
         ->setDescription($description)
         ->setDispatcher($dispatcher)
-        ->setCacheManager($cacheManager)
         ->setParameters($requestParameters)
         ->setUrlParameters($urlParameters)
-        ->setGuards($guards ?? new RouterGuardCollection());
-    }
-
-    public function addGuard(RouterGuardInterface $guard) : self
-    {
-        $guards = $this->guards ?? new RouterGuardCollection();
-
-        $guards->append($guard);
-
-        $this->guards = $guards;
-
-        return $this;
+        ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareCollection())
+        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareCollection());
     }
 
     public static function fromArray(array $config) : self
@@ -177,14 +170,6 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return RouterGuardCollection|null
-     */
-    public function getGuards() : ?RouterGuardCollection
-    {
-        return $this->guards;
-    }
-
-    /**
      * @return string
      */
     public function getRequestMethod() : string
@@ -217,14 +202,6 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return RouteCacheManager|null
-     */
-    public function getCacheManager() : ?RouteCacheManager
-    {
-        return $this->cacheManager;
-    }
-
-    /**
      * @return SchemaContract|null
      */
     public function getBodySchema() : ?SchemaContract
@@ -232,12 +209,31 @@ class RouteConfig implements \JsonSerializable
         return $this->bodySchema;
     }
 
+    /**
+     * @return ParameterCollection|null
+     */
     public function getUrlParameters() : ?ParameterCollection
     {
         return $this->urlParameters;
     }
 
-    //Private methods
+    /**
+     * @return MiddlewareCollection
+     */
+    public function getPreDispatchMiddleware() : MiddlewareCollection
+    {
+        return $this->preDispatch;
+    }
+
+    /**
+     * @return MiddlewareCollection
+     */
+    public function getPostDispatchMiddleware() : MiddlewareCollection
+    {
+        return $this->postDispatch;
+    }
+
+    //<editor-fold desc="Private methods">
 
     private function setName(string $name) : self
     {
@@ -305,12 +301,6 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    private function setCacheManager(RouteCacheManager $cacheManager=null) : self
-    {
-        $this->cacheManager = $cacheManager;
-        return $this;
-    }
-
     private function setDispatcher(RouteDispatcherInterface $dispatcher) : self
     {
         $this->dispatcher = $dispatcher;
@@ -326,12 +316,6 @@ class RouteConfig implements \JsonSerializable
     private function setUrlParameters(ParameterCollection $parameterCollection=null) : self
     {
         $this->urlParameters = $parameterCollection;
-        return $this;
-    }
-
-    private function setGuards(RouterGuardCollection $guards=null) : self
-    {
-        $this->guards = $guards;
         return $this;
     }
 
@@ -358,4 +342,26 @@ class RouteConfig implements \JsonSerializable
 
         throw new Exception\InvalidHttpMethodException($msg);
     }
+
+    /**
+     * @param MiddlewareCollection|null $preDispatch
+     * @return RouteConfig
+     */
+    private function setPreDispatchMiddleware(MiddlewareCollection $preDispatch) : self
+    {
+        $this->preDispatch = $preDispatch;
+        return $this;
+    }
+
+    /**
+     * @param MiddlewareCollection|null $postDispatch
+     * @return RouteConfig
+     */
+    private function setPostDispatchMiddleware(MiddlewareCollection $postDispatch) : self
+    {
+        $this->postDispatch = $postDispatch;
+        return $this;
+    }
+
+    //</editor-fold>
 }

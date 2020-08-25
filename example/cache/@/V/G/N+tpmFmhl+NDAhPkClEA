@@ -1,3 +1,0 @@
-1597976352
-test
-a:2:{s:7:"expires";O:8:"DateTime":3:{s:4:"date";s:26:"2020-08-21 02:19:12.484224";s:13:"timezone_type";i:3;s:8:"timezone";s:3:"UTC";}s:4:"data";s:100:"{"converted":"AAAAA","date":1597976342,"description":"This response will be cached for 10 seconds!"}";}

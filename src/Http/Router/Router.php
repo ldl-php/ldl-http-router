@@ -73,12 +73,6 @@ class Router
             $path = "{$group->getPrefix()}/$path";
         }
 
-        if(null !== $group && $group->getGuards()){
-            foreach($group->getGuards() as $guard){
-                $route->getConfig()->addGuard($guard);
-            }
-        }
-
         $this->collector->$method($path, static function () use ($route, $request, $response, $path) {
             $route->dispatch($request, $response, func_get_args());
         });

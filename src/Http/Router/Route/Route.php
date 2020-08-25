@@ -4,8 +4,8 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Guard\RouterGuardInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
+use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 
 use Phroute\Phroute\RouteParser;
@@ -51,14 +51,21 @@ class Route implements RouteInterface
         $this->parseRequestBodySchema($request, $response);
         $this->parseRequestUrlSchema($request, $response, $urlArgs);
 
-        $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_BEFORE);
+        /**
+         * @var MiddlewareInterface $preDispatch
+         */
+        foreach ($config->getPreDispatchMiddleware() as $preDispatch) {
+            if (false === $preDispatch->isActive()) {
+                continue;
+            }
 
-        $cacheManager = $config->getCacheManager();
+            $preDispatch->dispatch(
+                $this,
+                $request,
+                $response
+            );
 
-        if($cacheManager){
-            $cacheHit = $cacheManager->has($config->getDispatcher(), $request, $response);
-
-            if($cacheHit){
+            if ($response->getContent()) {
                 return;
             }
         }
@@ -70,6 +77,25 @@ class Route implements RouteInterface
             $config->getUrlParameters()
         );
 
+        /**
+         * @var MiddlewareInterface $preDispatch
+         */
+        foreach ($config->getPostDispatchMiddleware() as $postDispatch) {
+            if (false === $postDispatch->isActive()) {
+                continue;
+            }
+
+            $postDispatch->dispatch(
+                $this,
+                $request,
+                $response
+            );
+
+            if ($response->getContent()) {
+                return;
+            }
+        }
+
         $response->getHeaderBag()->set('Content-Type', $config->getResponseContentType());
 
         $isJson = preg_match('#application/json.*#', $config->getResponseContentType());
@@ -79,15 +105,9 @@ class Route implements RouteInterface
         }
 
         $response->setContent($result);
-
-        $this->applyGuards($request, $response, RouterGuardInterface::VALIDATE_AFTER);
-
-        if($config->getCacheManager()) {
-            $cacheManager->store($config->getDispatcher(), $request, $response);
-        }
     }
 
-    // Private methods
+    // <editor-fold desc="Private methods">
     private function parseRequestUrlSchema(
         RequestInterface $request,
         ResponseInterface $response,
@@ -229,30 +249,5 @@ class Route implements RouteInterface
 
     }
 
-    /**
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @param string $guardType
-     */
-    private function applyGuards(
-        RequestInterface $request,
-        ResponseInterface $response,
-        string $guardType
-    ) : void
-    {
-        $guards = $this->config->getGuards();
-
-        if(null === $guards){
-            return;
-        }
-
-        /**
-         * @var RouterGuardInterface $guard
-         */
-        foreach($guards->filterByType($guardType) as $guard){
-            $guard->validate($request, $response, $this->config->getRequestParameters());
-        }
-
-    }
-
+    //</editor-fold>
 }
