@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Middleware;
 
-use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 use LDL\Type\Collection\Interfaces;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Exception\TypeMismatchException;
@@ -13,7 +14,7 @@ class MiddlewareCollection extends ObjectCollection
     {
         parent::validateItem($item);
 
-        if($item instanceof MiddlewareInterface){
+        if ($item instanceof MiddlewareInterface) {
             return;
         }
 
@@ -28,17 +29,16 @@ class MiddlewareCollection extends ObjectCollection
 
     /**
      * @param MiddlewareInterface $item
-     * @param null $key
-     * @return Interfaces\CollectionInterface
+     * @param null                $key
      */
     public function append($item, $key = null): Interfaces\CollectionInterface
     {
         return parent::append($item, \spl_object_hash($item));
     }
 
-    public function sort(string $order='asc') : self
+    public function sort(string $order = 'asc'): self
     {
-        if(!in_array($order, ['asc','desc'])){
+        if (!in_array($order, ['asc', 'desc'])) {
             throw new \LogicException('Order must be one of "asc" or "desc"');
         }
 
@@ -49,9 +49,10 @@ class MiddlewareCollection extends ObjectCollection
             /**
              * @var MiddlewareInterface $a
              * @var MiddlewareInterface $b
+             *
              * @return bool
              */
-            function($a, $b) use ($order) {
+            function ($a, $b) use ($order) {
                 $prioA = $a->getPriority();
                 $prioB = $b->getPriority();
 
@@ -61,5 +62,4 @@ class MiddlewareCollection extends ObjectCollection
 
         return new static($items);
     }
-
 }
