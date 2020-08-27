@@ -118,7 +118,7 @@ class RouteFactory
                  * @var RouteConfigParserInterface $routeParser
                  */
                 foreach ($parserCollection as $routeParser) {
-                    $routeParser->parse($route, $instance);
+                    $routeParser->parse($route, $instance, $container);
                 }
             }
 
