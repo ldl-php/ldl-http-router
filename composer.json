@@ -8,7 +8,8 @@
         "ldl-framework/http-core": "dev-master",
         "ldl-framework/typed-collection": "^0.0.1",
         "swaggest/json-schema": "^0.12.29",
-        "symfony/string": "^5.1"
+        "symfony/string": "^5.1",
+        "psr/container": "^1.0"
     },
     "license": "MIT",
     "authors": [
@@ -19,7 +20,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "LDL\\": "src/"
+            "LDL\\Http\\Router\\": "src/LDL/Http/Router"
         }
     }
 }

@@ -11,7 +11,6 @@ use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use LDL\Http\Router\Route\Parameter\ParameterConverterInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Router;
-use LDL\Http\Router\Route\Cache\CacheableInterface;
 use LDL\Http\Router\Route\Parameter\ParameterInterface;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
@@ -20,8 +19,9 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
+use Psr\Container\ContainerInterface;
 
-class Dispatch implements RouteDispatcherInterface, CacheableInterface
+class Dispatch implements RouteDispatcherInterface
 {
     public function __construct()
     {
@@ -90,7 +90,7 @@ class NameTransformer implements ParameterConverterInterface{
 
 class ConfigParser implements RouteConfigParserInterface
 {
-    public function parse(array $data, Route $route): void
+    public function parse(array $data, Route $route, ContainerInterface $container = null): void
     {
         if(!array_key_exists('custom', $data)){
             return;
