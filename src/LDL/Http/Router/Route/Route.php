@@ -7,6 +7,7 @@ use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\FinalDispatcher;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 
@@ -92,7 +93,7 @@ class Route implements RouteInterface
             'main' => $result['main']
         ];
 
-        $final = [];
+        $final = new PostDispatchMiddlewareCollection();
 
         /**
          * @var PostDispatchMiddlewareInterface $postDispatch
@@ -103,7 +104,7 @@ class Route implements RouteInterface
             }
 
             if($postDispatch instanceof FinalDispatcher){
-                $final[] = $postDispatch;
+                $final->append($postDispatch);
                 continue;
             }
 
