@@ -88,11 +88,6 @@ class Route implements RouteInterface
 
         $result['main'] = $main;
 
-        $prevResults = [
-            'pre' => $result['pre'],
-            'main' => $result['main']
-        ];
-
         $final = new PostDispatchMiddlewareCollection();
 
         /**
@@ -104,6 +99,10 @@ class Route implements RouteInterface
             }
 
             if($postDispatch instanceof FinalDispatcher){
+                if(count($final) > 1){
+                    throw new \LogicException('You can only have ONE final post dispatcher');
+                }
+
                 $final->append($postDispatch);
                 continue;
             }
@@ -112,7 +111,7 @@ class Route implements RouteInterface
                 $this,
                 $request,
                 $response,
-                $prevResults
+                $result
             );
 
             if ($response->getContent()) {
@@ -128,16 +127,12 @@ class Route implements RouteInterface
          * @var PostDispatchMiddlewareInterface $finalDispatch
          */
         foreach($final as $finalDispatch){
-            $postResult = $finalDispatch->dispatch(
+            $finalDispatch->dispatch(
                 $this,
                 $request,
                 $response,
                 $result
             );
-
-            $result['post'][$finalDispatch->getNamespace()] = [
-                $finalDispatch->getName() => $postResult
-            ];
         }
 
         $parser = $config->getResponseParser();
