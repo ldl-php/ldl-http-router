@@ -14,6 +14,7 @@ use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Factory\Exception\SchemaException;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Parameter\Parameter;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use LDL\Http\Router\Route\Route;
@@ -110,7 +111,7 @@ class RouteFactory
                 self::getRequestHeaderSchema($route, $schemaRepo),
                 self::getRequestBodySchema($route, $schemaRepo),
                 self::getMiddleware($route, 'predispatch', $container),
-                self::getMiddleware($route, 'postdispatch', $container)
+                self::getPostDispatchMiddleware($route, 'postdispatch', $container)
             );
 
             $instance = new Route($config);
@@ -155,7 +156,7 @@ class RouteFactory
             ResponseParserInterface::class,
             get_class($return)
         );
-        throw new Exception\SchemaException(self::exceptionMessage($msg));
+        throw new Exception\SchemaException(self::exceptionMessage([$msg]));
     }
 
     private static function getUrlPrefix(array $route): string
@@ -343,6 +344,41 @@ class RouteFactory
         }
 
         $collection = new MiddlewareCollection();
+
+        foreach ($middlewareList as $dispatcher) {
+            $instance = ClassOrContainer::get($dispatcher, $container);
+            try {
+                $collection->append($instance);
+            } catch (\Exception $e) {
+                throw new Exception\InvalidSectionException(self::exceptionMessage([$e->getMessage()]));
+            }
+        }
+
+        return $collection;
+    }
+
+    private static function getPostDispatchMiddleware(
+        array $route,
+        string $middlewareType,
+        ContainerInterface $container = null
+    ): ?PostDispatchMiddlewareCollection {
+        if (!array_key_exists($middlewareType, $route)) {
+            return null;
+        }
+
+        $middlewareList = $route[$middlewareType];
+
+        if (!is_array($middlewareList)) {
+            $msg = sprintf(
+                'Section "%s" must be of type array, "%s" given.',
+                $middlewareType,
+                gettype($middlewareList)
+            );
+
+            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
+        }
+
+        $collection = new PostDispatchMiddlewareCollection();
 
         foreach ($middlewareList as $dispatcher) {
             $instance = ClassOrContainer::get($dispatcher, $container);

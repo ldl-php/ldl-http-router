@@ -6,6 +6,7 @@ use LDL\Http\Core\Request\Helper\RequestHelper;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use Swaggest\JsonSchema\SchemaContract;
 use Symfony\Component\String\UnicodeString;
@@ -73,7 +74,7 @@ class RouteConfig implements \JsonSerializable
     private $preDispatch;
 
     /**
-     * @var MiddlewareCollection
+     * @var PostDispatchMiddlewareCollection
      */
     private $postDispatch;
 
@@ -90,7 +91,7 @@ class RouteConfig implements \JsonSerializable
         SchemaContract $requestHeaderSchema = null,
         SchemaContract $bodySchema = null,
         MiddlewareCollection $preDispatchMiddleware=null,
-        MiddlewareCollection $postDispatchMiddleware=null
+        PostDispatchMiddlewareCollection $postDispatchMiddleware=null
     )
     {
         $this->setPrefix($prefix)
@@ -105,7 +106,7 @@ class RouteConfig implements \JsonSerializable
         ->setParameters($requestParameters)
         ->setUrlParameters($urlParameters)
         ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareCollection())
-        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareCollection());
+        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new PostDispatchMiddlewareCollection());
     }
 
     public static function fromArray(array $config) : self
@@ -221,9 +222,9 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return MiddlewareCollection
+     * @return PostDispatchMiddlewareCollection
      */
-    public function getPostDispatchMiddleware() : MiddlewareCollection
+    public function getPostDispatchMiddleware() : PostDispatchMiddlewareCollection
     {
         return $this->postDispatch;
     }
@@ -349,10 +350,10 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @param MiddlewareCollection|null $postDispatch
+     * @param PostDispatchMiddlewareCollection|null $postDispatch
      * @return RouteConfig
      */
-    private function setPostDispatchMiddleware(MiddlewareCollection $postDispatch) : self
+    private function setPostDispatchMiddleware(PostDispatchMiddlewareCollection $postDispatch) : self
     {
         $this->postDispatch = $postDispatch;
         return $this;

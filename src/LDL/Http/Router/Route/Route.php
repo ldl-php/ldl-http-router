@@ -6,6 +6,7 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
 
 use Phroute\Phroute\RouteParser;
@@ -85,8 +86,13 @@ class Route implements RouteInterface
 
         $result['main'] = $main;
 
+        $prevResults = [
+            'pre' => $result['pre'],
+            'main' => $result['main']
+        ];
+
         /**
-         * @var MiddlewareInterface $preDispatch
+         * @var PostDispatchMiddlewareInterface $postDispatch
          */
         foreach ($config->getPostDispatchMiddleware() as $postDispatch) {
             if (false === $postDispatch->isActive()) {
@@ -96,7 +102,8 @@ class Route implements RouteInterface
             $postResult = $postDispatch->dispatch(
                 $this,
                 $request,
-                $response
+                $response,
+                $prevResults
             );
 
             if ($response->getContent()) {

@@ -19,6 +19,7 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
 use Psr\Container\ContainerInterface;
 
 class Dispatch implements RouteDispatcherInterface
@@ -73,7 +74,7 @@ class PreDispatch implements MiddleWareInterface
     }
 }
 
-class PostDispatch implements MiddleWareInterface
+class PostDispatch implements PostDispatchMiddlewareInterface
 {
     public function getNamespace(): string
     {
@@ -95,7 +96,7 @@ class PostDispatch implements MiddleWareInterface
         return 1;
     }
 
-    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response)
+    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response, array $array = [])
     {
         return 'post dispatch result!';
     }
