@@ -3,7 +3,7 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
-use LDL\Http\Router\Route\Cache\RouteCacheManager;
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Parameter\ParameterCollection;
@@ -53,19 +53,14 @@ class RouteConfig implements \JsonSerializable
     private $requestParameters;
 
     /**
-     * @var RouteCacheManager
-     */
-    private $cacheManager;
-
-    /**
      * @var RouteDispatcherInterface
      */
     private $dispatcher;
 
     /**
-     * @var string
+     * @var ResponseParserInterface
      */
-    private $responseContentType;
+    private $responseParser;
 
     /**
      * @var ParameterCollection
@@ -88,7 +83,7 @@ class RouteConfig implements \JsonSerializable
         string $prefix,
         string $name,
         string $description,
-        string $responseContentType,
+        ResponseParserInterface $responseParser,
         RouteDispatcherInterface $dispatcher,
         ParameterCollection $requestParameters=null,
         ParameterCollection $urlParameters = null,
@@ -102,7 +97,7 @@ class RouteConfig implements \JsonSerializable
         ->setName($name)
         ->setVersion($version)
         ->setRequestMethod($method)
-        ->setResponseContentType($responseContentType)
+        ->setResponseParser($responseParser)
         ->setRequestHeaderSchema($requestHeaderSchema)
         ->setRequestBodySchema($bodySchema)
         ->setDescription($description)
@@ -178,11 +173,11 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return string
+     * @return ResponseParserInterface
      */
-    public function getResponseContentType() : string
+    public function getResponseParser() : ResponseParserInterface
     {
-        return $this->responseContentType;
+        return $this->responseParser;
     }
 
     /**
@@ -261,9 +256,9 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    private function setResponseContentType(string $type) : self
+    private function setResponseParser(ResponseParserInterface $parser) : self
     {
-        $this->responseContentType = $type;
+        $this->responseParser = $parser;
         return $this;
     }
 

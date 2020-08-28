@@ -8,6 +8,20 @@ use LDL\Http\Router\Route\Route;
 
 interface MiddlewareInterface
 {
+
+    /**
+     * Returns the namespace of this middleware
+     *
+     * @return string
+     */
+    public function getNamespace() : string;
+
+    /**
+     * Returns the name of this middleware
+     * @return string
+     */
+    public function getName() : string;
+
     /**
      * @return int
      */
@@ -27,6 +41,6 @@ interface MiddlewareInterface
         Route $route,
         RequestInterface $request,
         ResponseInterface $response
-    ) : void;
+    );
 
 }

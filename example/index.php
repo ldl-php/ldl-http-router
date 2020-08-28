@@ -37,7 +37,7 @@ class Dispatch implements RouteDispatcherInterface
         ResponseInterface $response,
         ParameterCollection $parameters = null,
         ParameterCollection $urlParameters = null
-    ) : array
+    )
     {
         return [
             'converted' => $parameters->get('name')->getConvertedValue()
@@ -47,6 +47,16 @@ class Dispatch implements RouteDispatcherInterface
 
 class PreDispatch implements MiddleWareInterface
 {
+    public function getNamespace(): string
+    {
+        return 'PreDispatchNamespace';
+    }
+
+    public function getName(): string
+    {
+        return 'PreDispatchName';
+    }
+
     public function isActive(): bool
     {
         return true;
@@ -57,14 +67,24 @@ class PreDispatch implements MiddleWareInterface
         return 1;
     }
 
-    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response): void
+    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response)
     {
-        $response->setContent('a');
+        return 'pre dispatch result!';
     }
 }
 
 class PostDispatch implements MiddleWareInterface
 {
+    public function getNamespace(): string
+    {
+        return 'PostDispatchNamespace';
+    }
+
+    public function getName(): string
+    {
+        return 'PostDispatchName';
+    }
+
     public function isActive(): bool
     {
         return true;
@@ -75,9 +95,9 @@ class PostDispatch implements MiddleWareInterface
         return 1;
     }
 
-    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response): void
+    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response)
     {
-        echo 'b';
+        return 'post dispatch result!';
     }
 }
 

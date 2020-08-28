@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace LDL\Http\Router\Route\Factory;
 
 use LDL\Http\Router\Helper\ClassOrContainer;
+use LDL\Http\Router\Response\Parser\JsonResponseParser;
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
@@ -101,7 +103,7 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
-                array_key_exists('contentType', $route['response']) ? $route['response']['contentType'] : '',
+                self::getResponseParser($route),
                 self::getDispatcher($route, $container),
                 self::getParameters($route, $container, $schemaRepo),
                 self::getUrlParameters($route, $container, $schemaRepo),
@@ -126,6 +128,34 @@ class RouteFactory
         }
 
         return $collection;
+    }
+
+    /**
+     * @param array $route
+     * @return ResponseParserInterface
+     * @throws SchemaException
+     * @throws \LDL\Http\Router\Helper\Exception\ClassNotFoundException
+     * @throws \LDL\Http\Router\Helper\Exception\SectionNotFoundException
+     * @throws \LDL\Http\Router\Helper\Exception\UndefinedContainerException
+     */
+    private static function getResponseParser(array $route) : ResponseParserInterface
+    {
+        if(false === array_key_exists('parser', $route['response'])){
+            return new JsonResponseParser();
+        }
+
+        $return = ClassOrContainer::get($route['response']['parser']);
+
+        if($return instanceof ResponseParserInterface) {
+            return $return;
+        }
+
+        $msg = sprintf(
+            'Response parser must be an instance of interface "%s", instance of "%s" was given',
+            ResponseParserInterface::class,
+            get_class($return)
+        );
+        throw new Exception\SchemaException(self::exceptionMessage($msg));
     }
 
     private static function getUrlPrefix(array $route): string
@@ -282,7 +312,7 @@ class RouteFactory
         if (!$object instanceof RouteDispatcherInterface) {
             $msg = sprintf(
                 'Dispatcher must be an instance of "%s"',
-            RouteDispatcherInterface::class
+                RouteDispatcherInterface::class
             );
 
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));

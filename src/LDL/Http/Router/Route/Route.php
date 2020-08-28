@@ -31,11 +31,11 @@ class Route implements RouteInterface
         return clone($this->config);
     }
 
+
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param array $urlArgs
-     *
      * @throws InvalidParameterException
      */
     public function dispatch(
@@ -49,7 +49,9 @@ class Route implements RouteInterface
         $this->parseRequestParameterSchema($request, $response);
         $this->parseRequestHeaderSchema($request, $response);
         $this->parseRequestBodySchema($request, $response);
-        $this->parseRequestUrlSchema($request, $response, $urlArgs);
+        $this->parseRequestUrlSchema($response, $urlArgs);
+
+        $result = [];
 
         /**
          * @var MiddlewareInterface $preDispatch
@@ -59,7 +61,7 @@ class Route implements RouteInterface
                 continue;
             }
 
-            $preDispatch->dispatch(
+            $preResult = $preDispatch->dispatch(
                 $this,
                 $request,
                 $response
@@ -68,14 +70,20 @@ class Route implements RouteInterface
             if ($response->getContent()) {
                 return;
             }
+
+            $result['pre'][$preDispatch->getNamespace()] = [
+                    $preDispatch->getName() => $preResult
+            ];
         }
 
-        $result = $config->getDispatcher()->dispatch(
+        $main = $config->getDispatcher()->dispatch(
             $request,
             $response,
             $config->getRequestParameters(),
             $config->getUrlParameters()
         );
+
+        $result['main'] = $main;
 
         /**
          * @var MiddlewareInterface $preDispatch
@@ -85,7 +93,7 @@ class Route implements RouteInterface
                 continue;
             }
 
-            $postDispatch->dispatch(
+            $postResult = $postDispatch->dispatch(
                 $this,
                 $request,
                 $response
@@ -94,22 +102,20 @@ class Route implements RouteInterface
             if ($response->getContent()) {
                 return;
             }
+
+            $result['post'][$postDispatch->getNamespace()] = [
+                $postDispatch->getName() => $postResult
+            ];
         }
 
-        $response->getHeaderBag()->set('Content-Type', $config->getResponseContentType());
+        $parser = $config->getResponseParser();
 
-        $isJson = preg_match('#application/json.*#', $config->getResponseContentType());
-
-        if($isJson){
-            $result = json_encode($result);
-        }
-
-        $response->setContent($result);
+        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+        $response->setContent($parser->parse($result));
     }
 
     // <editor-fold desc="Private methods">
     private function parseRequestUrlSchema(
-        RequestInterface $request,
         ResponseInterface $response,
         array $args = []
     ) : void
