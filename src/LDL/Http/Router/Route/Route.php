@@ -4,6 +4,7 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Dispatcher\FinalDispatcher;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
@@ -57,7 +58,7 @@ class Route implements RouteInterface
         /**
          * @var MiddlewareInterface $preDispatch
          */
-        foreach ($config->getPreDispatchMiddleware() as $preDispatch) {
+        foreach ($config->getPreDispatchMiddleware()->sort('asc') as $preDispatch) {
             if (false === $preDispatch->isActive()) {
                 continue;
             }
@@ -91,11 +92,18 @@ class Route implements RouteInterface
             'main' => $result['main']
         ];
 
+        $final = [];
+
         /**
          * @var PostDispatchMiddlewareInterface $postDispatch
          */
-        foreach ($config->getPostDispatchMiddleware() as $postDispatch) {
+        foreach ($config->getPostDispatchMiddleware()->sort('asc') as $postDispatch) {
             if (false === $postDispatch->isActive()) {
+                continue;
+            }
+
+            if($postDispatch instanceof FinalDispatcher){
+                $final[] = $postDispatch;
                 continue;
             }
 
@@ -112,6 +120,22 @@ class Route implements RouteInterface
 
             $result['post'][$postDispatch->getNamespace()] = [
                 $postDispatch->getName() => $postResult
+            ];
+        }
+
+        /**
+         * @var PostDispatchMiddlewareInterface $finalDispatch
+         */
+        foreach($final as $finalDispatch){
+            $postResult = $finalDispatch->dispatch(
+                $this,
+                $request,
+                $response,
+                $prevResults
+            );
+
+            $result['post'][$finalDispatch->getNamespace()] = [
+                $finalDispatch->getName() => $postResult
             ];
         }
 

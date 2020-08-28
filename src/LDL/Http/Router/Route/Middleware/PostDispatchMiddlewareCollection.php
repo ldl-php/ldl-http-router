@@ -32,7 +32,7 @@ class PostDispatchMiddlewareCollection extends ObjectCollection
      */
     public function append($item, $key = null): Interfaces\CollectionInterface
     {
-        return parent::append($item, \spl_object_hash($item));
+        return parent::append($item, $key ?? \spl_object_hash($item));
     }
 
     public function sort(string $order = 'asc'): self
@@ -51,7 +51,7 @@ class PostDispatchMiddlewareCollection extends ObjectCollection
              *
              * @return bool
              */
-            function ($a, $b) use ($order) {
+            static function ($a, $b) use ($order) {
                 $prioA = $a->getPriority();
                 $prioB = $b->getPriority();
 
