@@ -132,7 +132,7 @@ class Route implements RouteInterface
                 $this,
                 $request,
                 $response,
-                $prevResults
+                $result
             );
 
             $result['post'][$finalDispatch->getNamespace()] = [
