@@ -56,6 +56,10 @@ class Route implements RouteInterface
 
         $result = [];
 
+        $parser = $config->getResponseParser();
+
+        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+
         /**
          * @var MiddlewareInterface $preDispatch
          */
@@ -70,13 +74,16 @@ class Route implements RouteInterface
                 $response
             );
 
-            if ($response->getContent()) {
-                return;
-            }
-
             $result['pre'][$preDispatch->getNamespace()] = [
                     $preDispatch->getName() => $preResult
             ];
+
+            $httpStatusCode = $response->getStatusCode();
+
+            if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
+                $response->setContent($parser->parse($result));
+                return;
+            }
         }
 
         $main = $config->getDispatcher()->dispatch(
@@ -114,13 +121,16 @@ class Route implements RouteInterface
                 $result
             );
 
-            if ($response->getContent()) {
-                return;
-            }
-
             $result['post'][$postDispatch->getNamespace()] = [
                 $postDispatch->getName() => $postResult
             ];
+
+            $httpStatusCode = $response->getStatusCode();
+
+            if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
+                $response->setContent($parser->parse($result));
+                return;
+            }
         }
 
         /**
@@ -135,9 +145,6 @@ class Route implements RouteInterface
             );
         }
 
-        $parser = $config->getResponseParser();
-
-        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
         $response->setContent($parser->parse($result));
     }
 
