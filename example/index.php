@@ -7,14 +7,10 @@ use LDL\Http\Core\Request\RequestInterface;
 
 use LDL\Http\Core\Response\Response;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Parameter\ParameterCollection;
-use LDL\Http\Router\Route\Parameter\ParameterConverterInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Router;
-use LDL\Http\Router\Route\Parameter\ParameterInterface;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
-use LDL\Http\Router\Schema\SchemaRepository;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
@@ -35,13 +31,11 @@ class Dispatch implements RouteDispatcherInterface
 
     public function dispatch(
         RequestInterface $request,
-        ResponseInterface $response,
-        ParameterCollection $parameters = null,
-        ParameterCollection $urlParameters = null
+        ResponseInterface $response
     )
     {
         return [
-            'converted' => $parameters->get('name')->getConvertedValue()
+            'name' => $request->get('name')
         ];
     }
 }
@@ -68,7 +62,12 @@ class PreDispatch implements MiddleWareInterface
         return 1;
     }
 
-    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response)
+    public function dispatch(
+        Route $route,
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $urlArgs = []
+    )
     {
         return 'pre dispatch result!';
     }
@@ -102,18 +101,21 @@ class PostDispatch implements PostDispatchMiddlewareInterface
     }
 }
 
-class NameTransformer implements ParameterConverterInterface{
-    public function convert(ParameterInterface $parameter)
-    {
-        return strtoupper($parameter->getValue());
-    }
-}
-
+/**
+ * Class ConfigParser
+ *
+ * Useful for plugin developers to implement a custom route configuration
+ */
 class ConfigParser implements RouteConfigParserInterface
 {
-    public function parse(array $data, Route $route, ContainerInterface $container = null): void
+    public function parse(
+        array $data,
+        Route $route,
+        ContainerInterface $container = null,
+        string $file=null
+    ): void
     {
-        if(!array_key_exists('custom', $data)){
+        if(!array_key_exists('customConfig', $data)){
             return;
         }
 
@@ -125,16 +127,9 @@ class ConfigParser implements RouteConfigParserInterface
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new ConfigParser());
 
-$schemaRepo = new SchemaRepository();
-
-$schemaRepo->append('./schema/header-schema.json', 'header-parameters.schema');
-$schemaRepo->append('./schema/parameter-schema.json', 'request-parameters.schema');
-$schemaRepo->append('./schema/url-parameters-schema.json', 'url-parameters.schema');
-
 $routes = RouteFactory::fromJsonFile(
     './routes.json',
     null,
-    $schemaRepo,
     $parserCollection
 );
 

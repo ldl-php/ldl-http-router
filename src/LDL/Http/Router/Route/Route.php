@@ -9,10 +9,6 @@ use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
-use LDL\Http\Router\Route\Parameter\Exception\InvalidParameterException;
-
-use Phroute\Phroute\RouteParser;
-use Swaggest\JsonSchema\Context;
 
 class Route implements RouteInterface
 {
@@ -39,7 +35,6 @@ class Route implements RouteInterface
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param array $urlArgs
-     * @throws InvalidParameterException
      */
     public function dispatch(
         RequestInterface $request,
@@ -48,11 +43,6 @@ class Route implements RouteInterface
     ) : void
     {
         $config = $this->config;
-
-        $this->parseRequestParameterSchema($request, $response);
-        $this->parseRequestHeaderSchema($request, $response);
-        $this->parseRequestBodySchema($request, $response);
-        $this->parseRequestUrlSchema($response, $urlArgs);
 
         $result = [];
 
@@ -71,7 +61,8 @@ class Route implements RouteInterface
             $preResult = $preDispatch->dispatch(
                 $this,
                 $request,
-                $response
+                $response,
+                $urlArgs
             );
 
             $result['pre'][$preDispatch->getNamespace()] = [
@@ -88,9 +79,7 @@ class Route implements RouteInterface
 
         $main = $config->getDispatcher()->dispatch(
             $request,
-            $response,
-            $config->getRequestParameters(),
-            $config->getUrlParameters()
+            $response
         );
 
         $result['main'] = $main;
@@ -148,146 +137,4 @@ class Route implements RouteInterface
         $response->setContent($parser->parse($result));
     }
 
-    // <editor-fold desc="Private methods">
-    private function parseRequestUrlSchema(
-        ResponseInterface $response,
-        array $args = []
-    ) : void
-    {
-        if(null === $this->config->getUrlParameters()){
-            return;
-        }
-
-        if(null === $this->config->getUrlParameters()->getSchema()){
-            return;
-        }
-
-        $parser = new RouteParser();
-        $parsed = $parser->parse($this->config->getPrefix());
-
-        $variableParameters = [];
-
-        foreach($parsed[1] as $part){
-            if(false === $part['variable']){
-                continue;
-            }
-
-            $variableParameters[$part['name']] = current($args);
-            next($args);
-        }
-
-        $schema = $this->config->getUrlParameters()->getSchema();
-
-        try{
-            $context = new Context();
-            $context->tolerateStrings = true;
-
-            $schema->in(
-                (object) $variableParameters,
-                $context
-            );
-        }catch(\Exception $e){
-            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-            throw new InvalidParameterException($e->getMessage());
-        }
-
-    }
-
-    private function parseRequestHeaderSchema(RequestInterface $request, ResponseInterface $response) : void
-    {
-        $headerSchema = $this->config->getHeaderSchema();
-
-        if(!$headerSchema) {
-            return;
-        }
-
-        try{
-            $context = new Context();
-            $context->tolerateStrings = true;
-
-            $headers = [];
-            foreach($request->getHeaderBag()->getIterator() as $name => $value){
-                $headers[$name] = is_array($value) ? $value[0] : $value;
-            }
-
-            $headerSchema->in(
-                (object) $headers,
-                $context
-            );
-        }catch(\Exception $e){
-            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-            throw new InvalidParameterException($e->getMessage());
-        }
-    }
-
-    private function parseRequestBodySchema(RequestInterface $request, ResponseInterface $response) : void
-    {
-        $bodySchema = $this->config->getBodySchema();
-
-        if(!$bodySchema) {
-            return;
-        }
-
-        $content = $response->getContent() ? $response->getContent() : '[]';
-
-        try{
-            $content = json_decode($content,false,null,\JSON_THROW_ON_ERROR);
-
-            $context = new Context();
-            $context->tolerateStrings = true;
-
-            $bodySchema->in(
-                $content,
-                $context
-            );
-        }catch(\Exception $e){
-            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-            throw new InvalidParameterException($e->getMessage());
-        }
-    }
-
-    private function parseRequestParameterSchema(RequestInterface $request, ResponseInterface $response) : void
-    {
-        $requestParameters = (object) $request->getQuery()->all();
-
-        $params = $this->config->getRequestParameters();
-
-        if(null === $params){
-            return;
-        }
-
-        $schema = $params->getSchema();
-
-        foreach($schema->getProperties()->toArray() as $name => $param){
-            $default = null;
-
-            if(null !== $schema) {
-                $default = $schema->getProperties()->$name->getDefault();
-            }
-
-            if(!isset($requestParameters->$name) && $default){
-                $requestParameters->$name = $default;
-            }
-
-            $params->get($name)->setValue(isset($requestParameters->$name) ? $requestParameters->$name : null);
-        }
-
-        $params->freezeParameters();
-
-        if(null === $schema){
-            return;
-        }
-
-        try{
-            $context = new Context();
-            $context->tolerateStrings = true;
-            $schema->in($requestParameters, $context);
-        }catch(\Exception $e){
-            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-            throw new InvalidParameterException($e->getMessage());
-        }
-
-    }
-
-    //</editor-fold>
 }

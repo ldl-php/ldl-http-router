@@ -36,11 +36,13 @@ interface MiddlewareInterface
      * @param Route $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
+     * @param array $urlArguments
      */
     public function dispatch(
         Route $route,
         RequestInterface $request,
-        ResponseInterface $response
+        ResponseInterface $response,
+        array $urlArguments
     );
 
 }

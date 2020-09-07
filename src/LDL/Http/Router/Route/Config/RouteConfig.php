@@ -7,8 +7,6 @@ use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
-use LDL\Http\Router\Route\Parameter\ParameterCollection;
-use Swaggest\JsonSchema\SchemaContract;
 use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
@@ -17,16 +15,6 @@ class RouteConfig implements \JsonSerializable
      * @var string
      */
     private $prefix;
-
-    /**
-     * @var SchemaContract
-     */
-    private $headerSchema;
-
-    /**
-     * @var SchemaContract
-     */
-    private $bodySchema;
 
     /**
      * @var string
@@ -49,11 +37,6 @@ class RouteConfig implements \JsonSerializable
     private $version;
 
     /**
-     * @var ParameterCollection
-     */
-    private $requestParameters;
-
-    /**
      * @var RouteDispatcherInterface
      */
     private $dispatcher;
@@ -62,11 +45,6 @@ class RouteConfig implements \JsonSerializable
      * @var ResponseParserInterface
      */
     private $responseParser;
-
-    /**
-     * @var ParameterCollection
-     */
-    private $urlParameters;
 
     /**
      * @var MiddlewareCollection
@@ -86,10 +64,6 @@ class RouteConfig implements \JsonSerializable
         string $description,
         ResponseParserInterface $responseParser,
         RouteDispatcherInterface $dispatcher,
-        ParameterCollection $requestParameters=null,
-        ParameterCollection $urlParameters = null,
-        SchemaContract $requestHeaderSchema = null,
-        SchemaContract $bodySchema = null,
         MiddlewareCollection $preDispatchMiddleware=null,
         PostDispatchMiddlewareCollection $postDispatchMiddleware=null
     )
@@ -99,12 +73,8 @@ class RouteConfig implements \JsonSerializable
         ->setVersion($version)
         ->setRequestMethod($method)
         ->setResponseParser($responseParser)
-        ->setRequestHeaderSchema($requestHeaderSchema)
-        ->setRequestBodySchema($bodySchema)
         ->setDescription($description)
         ->setDispatcher($dispatcher)
-        ->setParameters($requestParameters)
-        ->setUrlParameters($urlParameters)
         ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareCollection())
         ->setPostDispatchMiddleware($postDispatchMiddleware ?? new PostDispatchMiddlewareCollection());
     }
@@ -182,38 +152,6 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return SchemaContract|null
-     */
-    public function getHeaderSchema() : ?SchemaContract
-    {
-        return $this->headerSchema;
-    }
-
-    /**
-     * @return ParameterCollection|null
-     */
-    public function getRequestParameters() : ?ParameterCollection
-    {
-        return $this->requestParameters;
-    }
-
-    /**
-     * @return SchemaContract|null
-     */
-    public function getBodySchema() : ?SchemaContract
-    {
-        return $this->bodySchema;
-    }
-
-    /**
-     * @return ParameterCollection|null
-     */
-    public function getUrlParameters() : ?ParameterCollection
-    {
-        return $this->urlParameters;
-    }
-
-    /**
      * @return MiddlewareCollection
      */
     public function getPreDispatchMiddleware() : MiddlewareCollection
@@ -242,18 +180,6 @@ class RouteConfig implements \JsonSerializable
         }
 
         $this->name = $name;
-        return $this;
-    }
-
-    private function setRequestBodySchema(SchemaContract $schema=null) : self
-    {
-        $this->bodySchema = $schema;
-        return $this;
-    }
-
-    private function setRequestHeaderSchema(SchemaContract $schema=null) : self
-    {
-        $this->headerSchema = $schema;
         return $this;
     }
 
@@ -300,18 +226,6 @@ class RouteConfig implements \JsonSerializable
     private function setDispatcher(RouteDispatcherInterface $dispatcher) : self
     {
         $this->dispatcher = $dispatcher;
-        return $this;
-    }
-
-    private function setParameters(ParameterCollection $parameterCollection=null) : self
-    {
-        $this->requestParameters = $parameterCollection;
-        return $this;
-    }
-
-    private function setUrlParameters(ParameterCollection $parameterCollection=null) : self
-    {
-        $this->urlParameters = $parameterCollection;
         return $this;
     }
 

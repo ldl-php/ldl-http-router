@@ -15,13 +15,8 @@ use LDL\Http\Router\Route\Factory\Exception\SchemaException;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
-use LDL\Http\Router\Route\Parameter\Parameter;
-use LDL\Http\Router\Route\Parameter\ParameterCollection;
 use LDL\Http\Router\Route\Route;
-use LDL\Http\Router\Schema\SchemaRepositoryInterface;
 use Psr\Container\ContainerInterface;
-use Swaggest\JsonSchema\Schema;
-use Swaggest\JsonSchema\SchemaContract;
 
 class RouteFactory
 {
@@ -31,7 +26,6 @@ class RouteFactory
     public static function fromJsonFile(
         string $file,
         ContainerInterface $container = null,
-        SchemaRepositoryInterface $schemaRepo = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
         if (!file_exists($file)) {
@@ -42,19 +36,18 @@ class RouteFactory
         self::$file = $file;
 
         if (!is_readable($file)) {
-            $msg = "Could not read schema file \"$file\", permission denied!";
+            $msg = "Could not read route schema file \"$file\", permission denied!";
             throw new Exception\SchemaFileError(self::exceptionMessage([$msg]));
         }
 
         self::$baseDirectory = dirname($file);
 
-        return self::fromJson(file_get_contents($file), $container, $schemaRepo, $parserCollection);
+        return self::fromJson(file_get_contents($file), $container, $parserCollection);
     }
 
     public static function fromJson(
         string $json,
         ContainerInterface $container = null,
-        SchemaRepositoryInterface $schemaRepo = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
         try {
@@ -66,7 +59,6 @@ class RouteFactory
                     \JSON_THROW_ON_ERROR
                 ),
                 $container,
-                $schemaRepo,
                 $parserCollection
             );
         } catch (\Exception $e) {
@@ -77,7 +69,6 @@ class RouteFactory
     public static function fromArray(
         array $data,
         ContainerInterface $container = null,
-        SchemaRepositoryInterface $schemaRepo = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
         $collection = new RouteCollection();
@@ -85,11 +76,6 @@ class RouteFactory
         foreach ($data['routes'] as $route) {
             if (!array_key_exists('request', $route)) {
                 $msg = '"request" section not found in route definition';
-                throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
-            }
-
-            if (!array_key_exists('response', $route)) {
-                $msg = '"response" section not found in route definition';
                 throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
             }
 
@@ -106,10 +92,6 @@ class RouteFactory
                 array_key_exists('description', $route) ? $route['description'] : '',
                 self::getResponseParser($route),
                 self::getDispatcher($route, $container),
-                self::getParameters($route, $container, $schemaRepo),
-                self::getUrlParameters($route, $container, $schemaRepo),
-                self::getRequestHeaderSchema($route, $schemaRepo),
-                self::getRequestBodySchema($route, $schemaRepo),
                 self::getMiddleware($route, 'predispatch', $container),
                 self::getPostDispatchMiddleware($route, 'postdispatch', $container)
             );
@@ -141,6 +123,10 @@ class RouteFactory
      */
     private static function getResponseParser(array $route) : ResponseParserInterface
     {
+        if(false === array_key_exists('response', $route)){
+            return new JsonResponseParser();
+        }
+
         if(false === array_key_exists('parser', $route['response'])){
             return new JsonResponseParser();
         }
@@ -172,133 +158,6 @@ class RouteFactory
         }
 
         return $route['url']['prefix'];
-    }
-
-    private static function getParameters(
-        array $route,
-        ContainerInterface $container = null,
-        SchemaRepositoryInterface $schemaRepo = null
-    ): ?ParameterCollection {
-        if (false === array_key_exists('parameters', $route['request'])) {
-            return null;
-        }
-
-        if (false === array_key_exists('schema', $route['request']['parameters'])) {
-            return null;
-        }
-
-        $schema = self::getSchema(
-            $route['request']['parameters']['schema'],
-            'parameters',
-            $schemaRepo
-        );
-
-        return self::parseSchema($schema, $container);
-    }
-
-    private static function getUrlParameters(
-        array $route,
-        ContainerInterface $container = null,
-        SchemaRepositoryInterface $schemaRepo = null
-    ) {
-        if (false === array_key_exists('parameters', $route['url'])) {
-            return null;
-        }
-
-        if (false === array_key_exists('schema', $route['url']['parameters'])) {
-            return null;
-        }
-
-        $schema = self::getSchema(
-            $route['url']['parameters']['schema'],
-            'parameters',
-            $schemaRepo
-        );
-
-        return self::parseSchema($schema, $container);
-    }
-
-    private static function parseSchema($schema, ContainerInterface $container = null)
-    {
-        $schema = json_decode(json_encode($schema), true);
-        $parameters = [];
-
-        foreach ($schema['properties'] as $name => &$values) {
-            $parameter = new Parameter($name);
-
-            if (!array_key_exists('LDL', $values)) {
-                $parameters[] = $parameter;
-                continue;
-            }
-
-            if (!array_key_exists('converter', $values['LDL'])) {
-                $parameters[] = $parameter;
-                continue;
-            }
-
-            $converter = $values['LDL']['converter'];
-
-            $converterInstance = null;
-
-            if (array_key_exists('class', $converter)) {
-                $converterInstance = new $converter['class']();
-            }
-
-            if (array_key_exists('container', $converter)) {
-                try {
-                    $converterInstance = $container->get($converter['container']);
-                } catch (\Exception $e) {
-                    throw new Exception\ConverterNotFoundException(self::exceptionMessage([$e->getMessage()]));
-                }
-            }
-
-            if (null === $converterInstance) {
-                $msg = 'Converter must specify a class or a container service';
-                throw new Exception\ConverterNotFoundException(self::exceptionMessage([$msg]));
-            }
-
-            $parameter->setConverter($converterInstance);
-
-            $parameters[] = $parameter;
-
-            unset($values['LDL']);
-        }
-
-        unset($values);
-
-        try {
-            $schema = Schema::import(json_decode(json_encode($schema), false));
-        } catch (\Exception $e) {
-            throw new Exception\SchemaException(self::exceptionMessage([$e->getMessage()]));
-        }
-
-        return new ParameterCollection($parameters, $schema);
-    }
-
-    private static function getRequestBodySchema(array $route, SchemaRepositoryInterface $schemaRepo = null): ?SchemaContract
-    {
-        if (!array_key_exists('body', $route['request'])) {
-            return null;
-        }
-
-        if (!array_key_exists('schema', $route['request']['body'])) {
-            return null;
-        }
-
-        return self::getSchema($route['request']['body']['schema'], 'body', $schemaRepo);
-    }
-
-    private static function getRequestHeaderSchema(array $route, SchemaRepositoryInterface $schemaRepo = null): ?SchemaContract
-    {
-        if (!array_key_exists('headers', $route['request'])) {
-            return null;
-        }
-
-        if (!array_key_exists('schema', $route['request']['headers'])) {
-            return null;
-        }
-
-        return self::getSchema($route['request']['headers']['schema'], 'headers', $schemaRepo);
     }
 
     private static function getDispatcher(array $route, ContainerInterface $container = null): RouteDispatcherInterface
@@ -390,45 +249,6 @@ class RouteFactory
         }
 
         return $collection;
-    }
-
-    private static function getSchema(
-        $schema,
-        string $section,
-        SchemaRepositoryInterface $schemaRepo = null
-    ): ?SchemaContract {
-        if (!is_array($schema)) {
-            $msg = "No schema specification, in section: \"$section\", must specify repository or inline";
-            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
-        }
-
-        $type = strtolower(key($schema));
-
-        switch ($type) {
-            case 'repository':
-                if (null === $schemaRepo) {
-                    $msg = "Schema repository specified but no repository was given, in section: $section";
-                    throw new SchemaException(self::exceptionMessage([$msg]));
-                }
-
-                $schemaData = $schemaRepo->getSchema($schema['repository']);
-                break;
-
-            case 'inline':
-                $schemaData = $schema['inline'];
-                break;
-
-            default:
-                $msg = "Bad schema specification: \"$type\", in section: \"$section\", must specify repository or inline";
-                throw new Exception\SchemaException(self::exceptionMessage([$msg]));
-                break;
-        }
-
-        try {
-            return Schema::import(json_decode(json_encode($schemaData), false));
-        } catch (\Exception $e) {
-            throw new Exception\SchemaException(self::exceptionMessage([$e->getMessage(), "In section: \"$section\""]));
-        }
     }
 
     private static function exceptionMessage(array $messages): string

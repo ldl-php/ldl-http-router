@@ -17,6 +17,6 @@ interface RouteConfigParserInterface
         array $data,
         Route $route,
         ContainerInterface $container = null,
-        string $file = null
+        string $file=null
     ): void;
 }
