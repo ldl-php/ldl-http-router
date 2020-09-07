@@ -65,13 +65,11 @@ class Route implements RouteInterface
                 $urlArgs
             );
 
-            if(null === $preResult){
-                continue;
-            }
-
-            $result['pre'][$preDispatch->getNamespace()] = [
+            if(null !== $preResult){
+                $result['pre'][$preDispatch->getNamespace()] = [
                     $preDispatch->getName() => $preResult
-            ];
+                ];
+            }
 
             $httpStatusCode = $response->getStatusCode();
 
@@ -114,13 +112,11 @@ class Route implements RouteInterface
                 $result
             );
 
-            if(null === $postResult){
-                continue;
+            if(null !== $postResult){
+                $result['post'][$postDispatch->getNamespace()] = [
+                    $postDispatch->getName() => $postResult
+                ];
             }
-
-            $result['post'][$postDispatch->getNamespace()] = [
-                $postDispatch->getName() => $postResult
-            ];
 
             $httpStatusCode = $response->getStatusCode();
 
@@ -128,6 +124,7 @@ class Route implements RouteInterface
                 $response->setContent($parser->parse($result));
                 return;
             }
+
         }
 
         /**
