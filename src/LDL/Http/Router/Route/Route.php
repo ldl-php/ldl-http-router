@@ -65,6 +65,10 @@ class Route implements RouteInterface
                 $urlArgs
             );
 
+            if(null === $preResult){
+                continue;
+            }
+
             $result['pre'][$preDispatch->getNamespace()] = [
                     $preDispatch->getName() => $preResult
             ];
@@ -109,6 +113,10 @@ class Route implements RouteInterface
                 $response,
                 $result
             );
+
+            if(null === $postResult){
+                continue;
+            }
 
             $result['post'][$postDispatch->getNamespace()] = [
                 $postDispatch->getName() => $postResult
