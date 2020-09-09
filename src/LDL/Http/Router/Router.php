@@ -6,7 +6,6 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
-use LDL\Http\Router\Route\Parameter\Exception\ParameterException;
 use LDL\Http\Router\Route\RouteInterface;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
@@ -98,10 +97,6 @@ class Router
                 $this->request->getMethod(),
                 parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );
-        }catch(ParameterException $e){
-
-            $this->response->setContent($e->getMessage());
-            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
 
         }catch(HttpMethodNotAllowedException $e){
 
