@@ -4,13 +4,11 @@ namespace LDL\Http\Router;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\RouteInterface;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
-use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
-use Phroute\Phroute\Exception\HttpRouteNotFoundException;
 
 class Router
 {
@@ -29,15 +27,22 @@ class Router
      */
     private $response;
 
+    /**
+     * @var ?ExceptionHandlerCollection
+     */
+    private $exceptionHandlerCollection;
+
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteCollector $collector=null
+        ExceptionHandlerCollection $exceptionHandlerCollection = null,
+        RouteCollector $collector = null
     )
     {
         $this->collector = $collector ?? new RouteCollector();
         $this->request = $request;
         $this->response = $response;
+        $this->exceptionHandlerCollection = $exceptionHandlerCollection;
     }
 
     /**
@@ -98,24 +103,57 @@ class Router
                 parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );
 
-        }catch(HttpMethodNotAllowedException $e){
+        }catch(\Exception $e){
+            if(
+                null === $this->exceptionHandlerCollection ||
+                0 === count($this->exceptionHandlerCollection)
+            ){
+                return $this->response;
+            }
 
-            $this->response->setContent($e->getMessage());
-            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED);
+            foreach($this->exceptionHandlerCollection->sort('asc') as $exceptionHandler){
+                $httpStatusCode = $exceptionHandler->handle($this, $e);
 
-        }catch(HttpRouteNotFoundException $e){
-
-            $this->response->setContent($e->getMessage());
-            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_NOT_FOUND);
-
-        }catch(InvalidContentTypeException $e){
-
-            $this->response->setContent($e->getMessage());
-            $this->response->setStatusCode(ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED);
-
+                if(null !== $httpStatusCode){
+                    $this->response->setStatusCode($httpStatusCode);
+                    $this->response->setContent($e->getMessage());
+                    break;
+                }
+            }
         }
 
         return $this->response;
     }
 
+    /**
+     * @return RequestInterface
+     */
+    public function getRequest(): RequestInterface
+    {
+        return $this->request;
+    }
+
+    /**
+     * @return ResponseInterface
+     */
+    public function getResponse(): ResponseInterface
+    {
+        return $this->response;
+    }
+
+    /**
+     * @return RouteCollector
+     */
+    public function getRouteCollector(): RouteCollector
+    {
+        return $this->collector;
+    }
+
+    /**
+     * @return ExceptionHandlerCollection
+     */
+    public function getExceptionHandlerCollection(): ExceptionHandlerCollection
+    {
+        return $this->exceptionHandlerCollection;
+    }
 }
