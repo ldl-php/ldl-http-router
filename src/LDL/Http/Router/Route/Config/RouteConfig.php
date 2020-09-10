@@ -3,6 +3,7 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
@@ -56,6 +57,11 @@ class RouteConfig implements \JsonSerializable
      */
     private $postDispatch;
 
+    /**
+     * @var ExceptionHandlerCollection
+     */
+    private $exceptionHandlerCollection;
+
     public function __construct(
         string $method,
         string $version,
@@ -64,8 +70,9 @@ class RouteConfig implements \JsonSerializable
         string $description,
         ResponseParserInterface $responseParser,
         RouteDispatcherInterface $dispatcher,
-        MiddlewareCollection $preDispatchMiddleware=null,
-        PostDispatchMiddlewareCollection $postDispatchMiddleware=null
+        MiddlewareCollection $preDispatchMiddleware = null,
+        PostDispatchMiddlewareCollection $postDispatchMiddleware = null,
+        ExceptionHandlerCollection $exceptionHandlerCollection = null
     )
     {
         $this->setPrefix($prefix)
@@ -76,7 +83,8 @@ class RouteConfig implements \JsonSerializable
         ->setDescription($description)
         ->setDispatcher($dispatcher)
         ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareCollection())
-        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new PostDispatchMiddlewareCollection());
+        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new PostDispatchMiddlewareCollection())
+        ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection());
     }
 
     public static function fromArray(array $config) : self
@@ -165,6 +173,14 @@ class RouteConfig implements \JsonSerializable
     public function getPostDispatchMiddleware() : PostDispatchMiddlewareCollection
     {
         return $this->postDispatch;
+    }
+
+    /**
+     * @return ExceptionHandlerCollection
+     */
+    public function getExceptionHandlerCollection(): ExceptionHandlerCollection
+    {
+        return $this->exceptionHandlerCollection;
     }
 
     //<editor-fold desc="Private methods">
@@ -270,6 +286,16 @@ class RouteConfig implements \JsonSerializable
     private function setPostDispatchMiddleware(PostDispatchMiddlewareCollection $postDispatch) : self
     {
         $this->postDispatch = $postDispatch;
+        return $this;
+    }
+
+    /**
+     * @param ExceptionHandlerCollection $exceptionHandlerCollection
+     * @return RouteConfig
+     */
+    private function setExceptionHandlerCollection(ExceptionHandlerCollection $exceptionHandlerCollection): RouteConfig
+    {
+        $this->exceptionHandlerCollection = $exceptionHandlerCollection;
         return $this;
     }
 

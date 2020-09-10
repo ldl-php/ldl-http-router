@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Factory;
 
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Helper\ClassOrContainer;
 use LDL\Http\Router\Response\Parser\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
@@ -16,6 +17,7 @@ use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
 use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Router;
 use Psr\Container\ContainerInterface;
 
 class RouteFactory
@@ -25,6 +27,7 @@ class RouteFactory
 
     public static function fromJsonFile(
         string $file,
+        Router $router,
         ContainerInterface $container = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
@@ -42,11 +45,12 @@ class RouteFactory
 
         self::$baseDirectory = dirname($file);
 
-        return self::fromJson(file_get_contents($file), $container, $parserCollection);
+        return self::fromJson(file_get_contents($file), $router, $container, $parserCollection);
     }
 
     public static function fromJson(
         string $json,
+        Router $router,
         ContainerInterface $container = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
@@ -58,6 +62,7 @@ class RouteFactory
                     2048,
                     \JSON_THROW_ON_ERROR
                 ),
+                $router,
                 $container,
                 $parserCollection
             );
@@ -68,6 +73,7 @@ class RouteFactory
 
     public static function fromArray(
         array $data,
+        Router $router,
         ContainerInterface $container = null,
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
@@ -93,10 +99,11 @@ class RouteFactory
                 self::getResponseParser($route),
                 self::getDispatcher($route, $container),
                 self::getMiddleware($route, 'predispatch', $container),
-                self::getPostDispatchMiddleware($route, 'postdispatch', $container)
+                self::getPostDispatchMiddleware($route, 'postdispatch', $container),
+                self::getHandlerExceptionParser($route)
             );
 
-            $instance = new Route($config);
+            $instance = new Route($router, $config);
 
             if (null !== $parserCollection) {
                 /**
@@ -262,5 +269,31 @@ class RouteFactory
             self::$file,
             implode(', ', $messages)
         );
+    }
+
+    private static function getHandlerExceptionParser(array $route) : ?ExceptionHandlerCollection
+    {
+        if(false === array_key_exists('handlers', $route)){
+            return null;
+        }
+
+        if(false === array_key_exists('exceptions', $route['handlers'])){
+            $msg = '"exceptions" not found in handlers section';
+            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
+        }
+
+        $collection = new ExceptionHandlerCollection();
+
+        foreach($route['handlers']['exceptions'] as $handler){
+            $instance = ClassOrContainer::get($handler);
+
+            try {
+                $collection->append($instance);
+            } catch (\Exception $e) {
+                throw new Exception\InvalidSectionException(self::exceptionMessage([$e->getMessage()]));
+            }
+        }
+
+        return $collection;
     }
 }

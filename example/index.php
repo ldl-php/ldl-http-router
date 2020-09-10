@@ -7,6 +7,10 @@ use LDL\Http\Core\Request\RequestInterface;
 
 use LDL\Http\Core\Response\Response;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
+use LDL\Http\Router\Handler\Exception\Handler\HttpMethodNotAllowedExceptionHandler;
+use LDL\Http\Router\Handler\Exception\Handler\HttpRouteNotFoundExceptionHandler;
+use LDL\Http\Router\Handler\Exception\Handler\InvalidContentTypeExceptionHandler;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Route\Factory\RouteFactory;
@@ -124,23 +128,30 @@ class ConfigParser implements RouteConfigParserInterface
     }
 }
 
+$exceptionHandlerCollection = new ExceptionHandlerCollection();
+$exceptionHandlerCollection->append(new HttpMethodNotAllowedExceptionHandler());
+$exceptionHandlerCollection->append(new HttpRouteNotFoundExceptionHandler());
+$exceptionHandlerCollection->append(new InvalidContentTypeExceptionHandler());
+
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new ConfigParser());
-
-$routes = RouteFactory::fromJsonFile(
-    './routes.json',
-    null,
-    $parserCollection
-);
-
-$group = new RouteGroup('student', 'student', $routes);
 
 $response = new Response();
 
 $router = new Router(
     Request::createFromGlobals(),
-    $response
+    $response,
+    $exceptionHandlerCollection
 );
+
+$routes = RouteFactory::fromJsonFile(
+    './routes.json',
+    $router,
+    null,
+    $parserCollection
+);
+
+$group = new RouteGroup('student', 'student', $routes);
 
 $router->addGroup($group);
 
