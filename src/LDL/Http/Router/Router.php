@@ -4,11 +4,42 @@ namespace LDL\Http\Router;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
+use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
+use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
+use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
+use Phroute\Phroute\HandlerResolverInterface;
 use Phroute\Phroute\RouteCollector;
 use Phroute\Phroute\Dispatcher;
+
+class Resolver implements HandlerResolverInterface {
+
+    /**
+     * @var Router
+     */
+    private $router;
+
+    public function __construct(Router $router)
+    {
+        $this->router = $router;
+    }
+
+    /**
+     * @param Route $route
+     * @return array
+     */
+    public function resolve($route) : array
+    {
+        return [
+                $route,
+                'dispatch'
+        ];
+    }
+
+}
 
 class Router
 {
@@ -32,17 +63,30 @@ class Router
      */
     private $exceptionHandlerCollection;
 
+    /**
+     * @var PreDispatchMiddlewareCollection
+     */
+    private $preDispatch;
+
+    /**
+     * @var PostDispatchMiddlewareCollection
+     */
+    private $postDispatch;
+
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
-        RouteCollector $collector = null
+        PreDispatchMiddlewareCollection $preDispatchMiddlewareCollection = null,
+        PostDispatchMiddlewareCollection $postDispatchMiddlewareCollection = null
     )
     {
         $this->collector = $collector ?? new RouteCollector();
         $this->request = $request;
         $this->response = $response;
-        $this->exceptionHandlerCollection = $exceptionHandlerCollection;
+        $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
+        $this->preDispatch = $preDispatchMiddlewareCollection ?? new PreDispatchMiddlewareCollection();
+        $this->postDispatch = $postDispatchMiddlewareCollection ?? new PostDispatchMiddlewareCollection();
     }
 
     /**
@@ -54,7 +98,6 @@ class Router
      */
     public function addRoute(RouteInterface $route, RouteGroupInterface $group=null) : self
     {
-        $request  = $this->request;
         $response = $this->response;
 
         $config = $route->getConfig();
@@ -77,9 +120,7 @@ class Router
             $path = "{$group->getPrefix()}/$path";
         }
 
-        $this->collector->$method($path, static function () use ($route, $request, $response, $path) {
-            $route->dispatch($request, $response, func_get_args());
-        });
+        $this->collector->$method($path, $route);
 
         return $this;
     }
@@ -96,7 +137,10 @@ class Router
     public function dispatch() : ResponseInterface
     {
         try {
-            $dispatcher = new Dispatcher($this->collector->getData());
+            $dispatcher = new RouterDispatcher(
+                $this->collector->getData(),
+                $this
+            );
 
             $dispatcher->dispatch(
                 $this->request->getMethod(),
@@ -104,22 +148,9 @@ class Router
             );
 
         }catch(\Exception $e){
-            if(
-                null === $this->exceptionHandlerCollection ||
-                0 === count($this->exceptionHandlerCollection)
-            ){
-                return $this->response;
-            }
 
-            foreach($this->exceptionHandlerCollection->sort('asc') as $exceptionHandler){
-                $httpStatusCode = $exceptionHandler->handle($this, $e);
+            $this->exceptionHandlerCollection->handle($this, $e);
 
-                if(null !== $httpStatusCode){
-                    $this->response->setStatusCode($httpStatusCode);
-                    $this->response->setContent($e->getMessage());
-                    break;
-                }
-            }
         }
 
         return $this->response;
@@ -156,4 +187,21 @@ class Router
     {
         return $this->exceptionHandlerCollection;
     }
+
+    /**
+     * @return PreDispatchMiddlewareCollection|null
+     */
+    public function getPreDispatchMiddleware() : ?PreDispatchMiddlewareCollection
+    {
+        return $this->preDispatch;
+    }
+
+    /**
+     * @return PostDispatchMiddlewareCollection|null
+     */
+    public function getPostDispatchMiddleware() : ?PostDispatchMiddlewareCollection
+    {
+        return $this->postDispatch;
+    }
+
 }

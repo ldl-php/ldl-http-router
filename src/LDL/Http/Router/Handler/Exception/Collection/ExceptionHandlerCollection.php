@@ -3,6 +3,7 @@
 namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
+use LDL\Http\Router\Router;
 use LDL\Type\Collection\AbstractCollection;
 use LDL\Type\Exception\TypeMismatchException;
 
@@ -48,5 +49,32 @@ class ExceptionHandlerCollection extends AbstractCollection
         );
 
         return new static($items);
+    }
+
+    public function handle(Router $router, \Exception $exception) : void
+    {
+        if(0 === count($this)){
+            return;
+        }
+
+        $response = $router->getResponse();
+
+        /**
+         * @var ExceptionHandlerInterface $exceptionHandler
+         */
+        foreach($this->sort('asc') as $exceptionHandler){
+
+            if(false === $exceptionHandler->isActive()){
+                continue;
+            }
+
+            $httpStatusCode = $exceptionHandler->handle($router, $exception);
+
+            if(null !== $httpStatusCode){
+                $response->setStatusCode($httpStatusCode);
+                $response->setContent($exception->getMessage());
+                return;
+            }
+        }
     }
 }

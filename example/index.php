@@ -18,8 +18,8 @@ use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
-use LDL\Http\Router\Route\Middleware\MiddlewareInterface;
-use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareInterface;
+use LDL\Http\Router\Middleware\PreDispatchMiddlewareInterface;
+use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
 use Psr\Container\ContainerInterface;
 
 class Dispatch implements RouteDispatcherInterface
@@ -44,7 +44,7 @@ class Dispatch implements RouteDispatcherInterface
     }
 }
 
-class PreDispatch implements MiddleWareInterface
+class PreDispatch implements PreDispatchMiddlewareInterface
 {
     public function getNamespace(): string
     {

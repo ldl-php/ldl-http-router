@@ -14,8 +14,8 @@ use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Factory\Exception\SchemaException;
 use LDL\Http\Router\Route\Group\RouteCollection;
-use LDL\Http\Router\Route\Middleware\MiddlewareCollection;
-use LDL\Http\Router\Route\Middleware\PostDispatchMiddlewareCollection;
+use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
+use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use Psr\Container\ContainerInterface;
@@ -192,7 +192,7 @@ class RouteFactory
         array $route,
         string $middlewareType,
         ContainerInterface $container = null
-    ): ?MiddlewareCollection {
+    ): ?PreDispatchMiddlewareCollection {
         if (!array_key_exists($middlewareType, $route)) {
             return null;
         }
@@ -209,7 +209,7 @@ class RouteFactory
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        $collection = new MiddlewareCollection();
+        $collection = new PreDispatchMiddlewareCollection();
 
         foreach ($middlewareList as $dispatcher) {
             $instance = ClassOrContainer::get($dispatcher, $container);

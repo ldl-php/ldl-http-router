@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace LDL\Http\Router\Route\Middleware;
+namespace LDL\Http\Router\Middleware;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
