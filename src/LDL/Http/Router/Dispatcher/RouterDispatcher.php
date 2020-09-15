@@ -51,7 +51,9 @@ class RouterDispatcher {
          */
         [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
 
-        $this->router->setCurrentRoute($route);
+        if($route) {
+            $this->router->setCurrentRoute($route);
+        }
 
         $request = $this->router->getRequest();
         $response = $this->router->getResponse();

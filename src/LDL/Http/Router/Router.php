@@ -6,6 +6,8 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
+use LDL\Http\Router\Response\Parser\JsonResponseParser;
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
@@ -50,12 +52,18 @@ class Router
      */
     private $postDispatch;
 
+    /**
+     * @var ResponseParserInterface
+     */
+    private $responseParser;
+
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
         PreDispatchMiddlewareCollection $preDispatchMiddlewareCollection = null,
-        PostDispatchMiddlewareCollection $postDispatchMiddlewareCollection = null
+        PostDispatchMiddlewareCollection $postDispatchMiddlewareCollection = null,
+        ResponseParserInterface $responseParser = null
     )
     {
         $this->collector = $collector ?? new RouteCollector();
@@ -64,6 +72,7 @@ class Router
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
         $this->preDispatch = $preDispatchMiddlewareCollection ?? new PreDispatchMiddlewareCollection();
         $this->postDispatch = $postDispatchMiddlewareCollection ?? new PostDispatchMiddlewareCollection();
+        $this->responseParser = $responseParser;
     }
 
     /**
@@ -120,6 +129,11 @@ class Router
     public function getCurrentRoute() : ?Route
     {
         return $this->currentRoute;
+    }
+
+    public function getResponseParser() : ?ResponseParserInterface
+    {
+        return $this->responseParser;
     }
 
     public function dispatch() : ResponseInterface

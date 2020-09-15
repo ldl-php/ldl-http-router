@@ -60,11 +60,13 @@ class ExceptionHandlerCollection extends AbstractCollection
     {
         if(0 === count($this)){
             throw $exception;
-            return;
         }
 
         $response = $router->getResponse();
-        $parser = $router->getCurrentRoute()->getConfig()->getResponseParser();
+
+        $currentRoute = $router->getCurrentRoute();
+
+        $parser = $currentRoute ? $currentRoute->getConfig()->getResponseParser() : $router->getResponseParser();
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler
@@ -83,7 +85,7 @@ class ExceptionHandlerCollection extends AbstractCollection
 
             $response->setStatusCode($httpStatusCode);
             $response->setContent(
-                $parser->parse(['error' => $exception->getMessage()])
+                $parser ? $parser->parse(['error' => $exception->getMessage()]) : $exception->getMessage()
             );
             return;
         }
