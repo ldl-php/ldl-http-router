@@ -41,12 +41,14 @@ class Route implements RouteInterface
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param array $urlArgs
+     * @return array
+     * @throws \Exception
      */
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
         array $urlArgs = []
-    ) : void
+    ) : array
     {
         $config = $this->config;
 
@@ -67,16 +69,13 @@ class Route implements RouteInterface
             $httpStatusCode = $response->getStatusCode();
 
             if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-                $response->setContent($parser->parse($result));
-                return;
+                return $result;
             }
 
-            $main = $config->getDispatcher()->dispatch(
+            $result['main'] = $config->getDispatcher()->dispatch(
                 $request,
                 $response
             );
-
-            $result['main'] = $main;
 
             $result['post'] = $config->getPostDispatchMiddleware()->dispatch(
                 $this,
@@ -89,7 +88,7 @@ class Route implements RouteInterface
 
             if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
                 $response->setContent($parser->parse($result));
-                return;
+                return $result;
             }
 
             $config->getPostDispatchMiddleware()->dispatchFinal(
@@ -99,14 +98,19 @@ class Route implements RouteInterface
                 $result
             );
 
-            $response->setContent($parser->parse($result));
-
         }catch(\Exception $e){
 
+            /**
+             * Handle route specific exceptions, rethrow exception so global exceptions can
+             * also be executed.
+             */
             $this->config->getExceptionHandlerCollection()->handle($this->router, $e);
+
+            throw $e;
 
         }
 
+        return $result;
     }
 
 }

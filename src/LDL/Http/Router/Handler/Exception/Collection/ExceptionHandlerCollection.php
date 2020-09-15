@@ -51,13 +51,20 @@ class ExceptionHandlerCollection extends AbstractCollection
         return new static($items);
     }
 
+    /**
+     * @param Router $router
+     * @param \Exception $exception
+     * @throws \Exception
+     */
     public function handle(Router $router, \Exception $exception) : void
     {
         if(0 === count($this)){
+            throw $exception;
             return;
         }
 
         $response = $router->getResponse();
+        $parser = $router->getCurrentRoute()->getConfig()->getResponseParser();
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler
@@ -70,11 +77,17 @@ class ExceptionHandlerCollection extends AbstractCollection
 
             $httpStatusCode = $exceptionHandler->handle($router, $exception);
 
-            if(null !== $httpStatusCode){
-                $response->setStatusCode($httpStatusCode);
-                $response->setContent($exception->getMessage());
-                return;
+            if(null === $httpStatusCode) {
+                continue;
             }
+
+            $response->setStatusCode($httpStatusCode);
+            $response->setContent(
+                $parser->parse(['error' => $exception->getMessage()])
+            );
+            return;
         }
+
+        throw $exception;
     }
 }

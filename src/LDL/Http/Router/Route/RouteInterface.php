@@ -21,5 +21,5 @@ interface RouteInterface
         RequestInterface $request,
         ResponseInterface $response,
         array $urlArgs = []
-    ) : void;
+    ) : array;
 }

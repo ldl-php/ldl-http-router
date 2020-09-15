@@ -45,22 +45,28 @@ class RouterDispatcher {
      */
     public function dispatch(string $httpMethod, string $uri)
     {
-
+        $result = [];
         /**
          * @var Route $route
          */
         [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
 
+        $this->router->setCurrentRoute($route);
+
         $request = $this->router->getRequest();
         $response = $this->router->getResponse();
         $parser = $route->getConfig()->getResponseParser();
 
-        $result = $this->router->getPreDispatchMiddleware()->dispatch(
+        $preDispatch = $this->router->getPreDispatchMiddleware()->dispatch(
             $route,
             $request,
             $response
         );
 
+        if(count($preDispatch)){
+            $result['router']['pre'] = $preDispatch;
+        }
+
         $httpStatusCode = $response->getStatusCode();
 
         if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
@@ -68,21 +74,19 @@ class RouterDispatcher {
             return;
         }
 
-        $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
+        $result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
 
-        $this->router->getPostDispatchMiddleware()->dispatch(
+        $postDispatch = $this->router->getPostDispatchMiddleware()->dispatch(
             $route,
             $this->router->getRequest(),
             $this->router->getResponse()
         );
 
-        $httpStatusCode = $response->getStatusCode();
-
-        if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-            $response->setContent($parser->parse($result));
-            return;
+        if(count($postDispatch)){
+            $result['router']['post'] = $postDispatch;
         }
 
+        $response->setContent($parser->parse($result));
     }
 
     /**

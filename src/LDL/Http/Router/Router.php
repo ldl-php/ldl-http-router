@@ -11,35 +11,7 @@ use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
 use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
-use Phroute\Phroute\HandlerResolverInterface;
 use Phroute\Phroute\RouteCollector;
-use Phroute\Phroute\Dispatcher;
-
-class Resolver implements HandlerResolverInterface {
-
-    /**
-     * @var Router
-     */
-    private $router;
-
-    public function __construct(Router $router)
-    {
-        $this->router = $router;
-    }
-
-    /**
-     * @param Route $route
-     * @return array
-     */
-    public function resolve($route) : array
-    {
-        return [
-                $route,
-                'dispatch'
-        ];
-    }
-
-}
 
 class Router
 {
@@ -67,6 +39,11 @@ class Router
      * @var PreDispatchMiddlewareCollection
      */
     private $preDispatch;
+
+    /**
+     * @var Route
+     */
+    private $currentRoute;
 
     /**
      * @var PostDispatchMiddlewareCollection
@@ -134,6 +111,17 @@ class Router
         return $this;
     }
 
+    public function setCurrentRoute(Route $route) : self
+    {
+        $this->currentRoute = $route;
+        return $this;
+    }
+
+    public function getCurrentRoute() : ?Route
+    {
+        return $this->currentRoute;
+    }
+
     public function dispatch() : ResponseInterface
     {
         try {
@@ -149,6 +137,9 @@ class Router
 
         }catch(\Exception $e){
 
+            /**
+             * Handle global exceptions
+             */
             $this->exceptionHandlerCollection->handle($this, $e);
 
         }
