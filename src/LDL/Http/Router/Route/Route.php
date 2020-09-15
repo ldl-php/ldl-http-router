@@ -4,11 +4,7 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Dispatcher\FinalDispatcher;
 use LDL\Http\Router\Route\Config\RouteConfig;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareInterface;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Router;
 
 class Route implements RouteInterface

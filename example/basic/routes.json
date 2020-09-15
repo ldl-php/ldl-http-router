@@ -1,0 +1,18 @@
+{
+  "routes": [
+    {
+      "version": "1.0",
+      "url": {
+        "prefix": "list/{urlName}"
+      },
+      "request": {
+        "method": "get"
+      },
+      "name": "testRoute",
+      "description": "A test route",
+      "dispatcher": {
+        "class": "Dispatch"
+      }
+    }
+  ]
+}

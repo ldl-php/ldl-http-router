@@ -1,0 +1,37 @@
+{
+  "routes": [
+    {
+      "version": "1.0",
+      "url": {
+        "prefix": "post/{urlName}"
+      },
+      "request": {
+        "method": "get"
+      },
+      "name": "testRoute",
+      "description": "A test route",
+      "dispatcher": {
+        "class": "Dispatch"
+      }
+    },
+    {
+      "version": "2.0",
+      "url": {
+        "prefix": "post/{urlName}"
+      },
+      "request": {
+        "method": "get"
+      },
+      "name": "testLocalPostdispatchRoute",
+      "description": "This route use a local postdispatch",
+      "dispatcher": {
+        "class": "Dispatch"
+      },
+      "postdispatch": {
+        "LocalPostdispatchClass": {
+          "class": "LocalPostdispatch"
+        }
+      }
+    }
+  ]
+}

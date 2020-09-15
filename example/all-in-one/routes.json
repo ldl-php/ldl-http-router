@@ -8,13 +8,20 @@
       "request": {
         "method": "get"
       },
-      "name": "test",
+      "name": "testRoute",
       "description": "A test route",
       "dispatcher": {
         "class": "Dispatch"
       },
-      "customConfig": {
-        "test": "1"
+      "customConfig": {},
+      "handlers": {
+        "exceptions": [
+          {
+            "class": "testingExceptionHandler",
+            "active": true,
+            "priority": 1
+          }
+        ]
       }
     }
   ]
