@@ -59,12 +59,16 @@ class Route implements RouteInterface
         $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
         try{
-            $result['pre'] = $config->getPreDispatchMiddleware()->dispatch(
+            $preResult = $config->getPreDispatchMiddleware()->dispatch(
                 $this,
                 $request,
                 $response,
                 $urlArgs
             );
+
+            if(count($preResult) > 0) {
+                $result['pre'] = $preResult;
+            }
 
             $httpStatusCode = $response->getStatusCode();
 
@@ -72,17 +76,24 @@ class Route implements RouteInterface
                 return $result;
             }
 
-            $result['main'] = $config->getDispatcher()->dispatch(
+            $mainResult = $config->getDispatcher()->dispatch(
                 $request,
                 $response
             );
 
-            $result['post'] = $config->getPostDispatchMiddleware()->dispatch(
+            if($mainResult) {
+                $result['main'] = $mainResult;
+            }
+
+            $postResult = $config->getPostDispatchMiddleware()->dispatch(
                 $this,
                 $request,
-                $response,
-                $onlyFinal = false
+                $response
             );
+
+            if($postResult){
+                $result['post'] = $postResult;
+            }
 
             $httpStatusCode = $response->getStatusCode();
 

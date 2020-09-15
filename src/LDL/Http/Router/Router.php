@@ -66,7 +66,7 @@ class Router
         ResponseParserInterface $responseParser = null
     )
     {
-        $this->collector = $collector ?? new RouteCollector();
+        $this->collector = new RouteCollector();
         $this->request = $request;
         $this->response = $response;
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
