@@ -8,6 +8,7 @@ use LDL\Http\Router\Router;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\Exception\HttpRouteNotFoundException;
 use Phroute\Phroute\RouteDataInterface;
+use Phroute\Phroute\Route as PhRoute;
 
 class RouterDispatcher {
 
@@ -37,11 +38,9 @@ class RouterDispatcher {
     }
 
     /**
-     * Dispatch a route for the given HTTP Method / URI.
-     *
-     * @param $httpMethod
-     * @param $uri
-     * @return void
+     * @param string $httpMethod
+     * @param string $uri
+     * @throws \Exception
      */
     public function dispatch(string $httpMethod, string $uri)
     {
@@ -92,11 +91,11 @@ class RouterDispatcher {
     }
 
     /**
-     * Perform the route dispatching. Check static routes first followed by variable routes.
-     *
      * @param $httpMethod
      * @param $uri
-     * @throws Exception\HttpRouteNotFoundException
+     * @return mixed
+     * @throws HttpMethodNotAllowedException
+     * @throws HttpRouteNotFoundException
      */
     private function dispatchRoute($httpMethod, $uri)
     {
@@ -109,12 +108,10 @@ class RouterDispatcher {
     }
 
     /**
-     * Handle the dispatching of static routes.
-     *
      * @param $httpMethod
      * @param $uri
      * @return mixed
-     * @throws Exception\HttpMethodNotAllowedException
+     * @throws HttpMethodNotAllowedException
      */
     private function dispatchStaticRoute($httpMethod, $uri)
     {
@@ -129,19 +126,18 @@ class RouterDispatcher {
     }
 
     /**
-     * Check fallback routes: HEAD for GET requests followed by the ANY attachment.
-     *
      * @param $routes
      * @param $httpMethod
-     * @throws Exception\HttpMethodNotAllowedException
+     * @return mixed
+     * @throws HttpMethodNotAllowedException
      */
     private function checkFallbacks($routes, $httpMethod)
     {
-        $additional = array(Route::ANY);
+        $additional = array(PhRoute::ANY);
 
-        if($httpMethod === Route::HEAD)
+        if($httpMethod === PhRoute::HEAD)
         {
-            $additional[] = Route::GET;
+            $additional[] = PhRoute::GET;
         }
 
         foreach($additional as $method)
@@ -158,12 +154,10 @@ class RouterDispatcher {
     }
 
     /**
-     * Handle the dispatching of variable routes.
-     *
      * @param $httpMethod
      * @param $uri
-     * @throws Exception\HttpMethodNotAllowedException
-     * @throws Exception\HttpRouteNotFoundException
+     * @return mixed
+     * @throws HttpRouteNotFoundException
      */
     private function dispatchVariableRoute($httpMethod, $uri)
     {
