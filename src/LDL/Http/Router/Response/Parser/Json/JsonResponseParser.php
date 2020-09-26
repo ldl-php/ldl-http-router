@@ -1,6 +1,9 @@
 <?php
 
-namespace LDL\Http\Router\Response\Parser;
+namespace LDL\Http\Router\Response\Parser\Json;
+
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
+use LDL\Http\Router\Router;
 
 class JsonResponseParser implements ResponseParserInterface
 {
@@ -23,8 +26,8 @@ class JsonResponseParser implements ResponseParserInterface
         return $this->contentType;
     }
 
-    public function parse(array $data): string
+    public function parse(array $data, string $context, Router $router): string
     {
-        return json_encode($data);
+        return json_encode($data, \JSON_THROW_ON_ERROR);
     }
 }

@@ -50,7 +50,7 @@ class HttpMethodNotAllowedExceptionHandler implements ExceptionHandlerInterface
         return $this->isActive;
     }
 
-    public function handle(Router $router, \Exception $e): ?int
+    public function handle(Router $router, \Exception $e, string $context): ?int
     {
         return $e instanceof HttpMethodNotAllowedException ? ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED : null;
     }

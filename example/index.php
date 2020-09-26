@@ -4,7 +4,6 @@ require __DIR__.'/../vendor/autoload.php';
 
 use LDL\Http\Core\Request\Request;
 use LDL\Http\Core\Request\RequestInterface;
-
 use LDL\Http\Core\Response\Response;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
@@ -18,25 +17,15 @@ use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareInterface;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
+use LDL\Http\Router\Middleware\MiddlewareInterface;
 use Psr\Container\ContainerInterface;
 
-class Dispatch implements RouteDispatcherInterface
+class Dispatcher implements RouteDispatcherInterface
 {
-    public function __construct()
-    {
-    }
-
-    public function getCacheKey(RequestInterface $request): string
-    {
-        return 'test';
-    }
-
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response
-    )
+    ) : ?array
     {
         return [
             'name' => $request->get('name')
@@ -44,7 +33,7 @@ class Dispatch implements RouteDispatcherInterface
     }
 }
 
-class PreDispatch implements PreDispatchMiddlewareInterface
+class PreDispatch implements MiddlewareInterface
 {
     public function getNamespace(): string
     {
@@ -77,7 +66,7 @@ class PreDispatch implements PreDispatchMiddlewareInterface
     }
 }
 
-class PostDispatch implements PostDispatchMiddlewareInterface
+class PostDispatch implements MiddlewareInterface
 {
     public function getNamespace(): string
     {
@@ -99,7 +88,12 @@ class PostDispatch implements PostDispatchMiddlewareInterface
         return 1;
     }
 
-    public function dispatch(Route $route, RequestInterface $request, ResponseInterface $response, array $array = [])
+    public function dispatch(
+        Route $route,
+        RequestInterface $request,
+        ResponseInterface $response,
+        array $urlArguments = []
+    )
     {
         return 'post dispatch result!';
     }
@@ -151,7 +145,7 @@ $routes = RouteFactory::fromJsonFile(
     $parserCollection
 );
 
-$group = new RouteGroup('student', 'student', $routes);
+$group = new RouteGroup('Test Group', 'test', $routes);
 
 $router->addGroup($group);
 

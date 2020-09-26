@@ -6,17 +6,21 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Response\Parser\JsonResponseParser;
+use LDL\Http\Router\Middleware\MiddlewareChain;
+use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
 use Phroute\Phroute\RouteCollector;
 
 class Router
 {
+    public const CONTEXT_ROUTER_EXCEPTION = 'router_exception';
+    public const CONTEXT_ROUTER_PRE_DISPATCH = 'router_preDispatch';
+    public const CONTEXT_ROUTER_POST_DISPATCH = 'router_postDispatch';
+
     /**
      * @var RouteCollector
      */
@@ -38,7 +42,7 @@ class Router
     private $exceptionHandlerCollection;
 
     /**
-     * @var PreDispatchMiddlewareCollection
+     * @var MiddlewareChainInterface
      */
     private $preDispatch;
 
@@ -48,7 +52,7 @@ class Router
     private $currentRoute;
 
     /**
-     * @var PostDispatchMiddlewareCollection
+     * @var MiddlewareChainInterface
      */
     private $postDispatch;
 
@@ -61,8 +65,8 @@ class Router
         RequestInterface $request,
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
-        PreDispatchMiddlewareCollection $preDispatchMiddlewareCollection = null,
-        PostDispatchMiddlewareCollection $postDispatchMiddlewareCollection = null,
+        MiddlewareChainInterface $preDispatchMiddlewareChain = null,
+        MiddlewareChainInterface $postDispatchMiddlewareChain = null,
         ResponseParserInterface $responseParser = null
     )
     {
@@ -70,9 +74,9 @@ class Router
         $this->request = $request;
         $this->response = $response;
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
-        $this->preDispatch = $preDispatchMiddlewareCollection ?? new PreDispatchMiddlewareCollection();
-        $this->postDispatch = $postDispatchMiddlewareCollection ?? new PostDispatchMiddlewareCollection();
-        $this->responseParser = $responseParser;
+        $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
+        $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
+        $this->responseParser = $responseParser ?? new JsonResponseParser();
     }
 
     /**
@@ -150,12 +154,16 @@ class Router
             );
 
         }catch(\Exception $e){
-
             /**
-             * Handle global exceptions
+             * Handle global router exceptions, the exception will only be rethrown if no exception handler
+             * is found.
              */
-            $this->exceptionHandlerCollection->handle($this, $e);
-
+            $this->exceptionHandlerCollection
+                ->handle(
+                    $this,
+                    $e,
+                    self::CONTEXT_ROUTER_EXCEPTION
+                );
         }
 
         return $this->response;
@@ -194,17 +202,17 @@ class Router
     }
 
     /**
-     * @return PreDispatchMiddlewareCollection|null
+     * @return MiddlewareChainInterface
      */
-    public function getPreDispatchMiddleware() : ?PreDispatchMiddlewareCollection
+    public function getPreDispatchMiddleware() : MiddlewareChainInterface
     {
         return $this->preDispatch;
     }
 
     /**
-     * @return PostDispatchMiddlewareCollection|null
+     * @return MiddlewareChainInterface
      */
-    public function getPostDispatchMiddleware() : ?PostDispatchMiddlewareCollection
+    public function getPostDispatchMiddleware() : MiddlewareChainInterface
     {
         return $this->postDispatch;
     }

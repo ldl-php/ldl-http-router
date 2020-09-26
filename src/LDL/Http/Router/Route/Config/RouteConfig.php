@@ -4,10 +4,9 @@ namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
+use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
 use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
@@ -48,12 +47,12 @@ class RouteConfig implements \JsonSerializable
     private $responseParser;
 
     /**
-     * @var PreDispatchMiddlewareCollection
+     * @var MiddlewareChain
      */
     private $preDispatch;
 
     /**
-     * @var PostDispatchMiddlewareCollection
+     * @var MiddlewareChain
      */
     private $postDispatch;
 
@@ -68,10 +67,10 @@ class RouteConfig implements \JsonSerializable
         string $prefix,
         string $name,
         string $description,
-        ResponseParserInterface $responseParser,
         RouteDispatcherInterface $dispatcher,
-        PreDispatchMiddlewareCollection $preDispatchMiddleware = null,
-        PostDispatchMiddlewareCollection $postDispatchMiddleware = null,
+        ResponseParserInterface $responseParser = null,
+        MiddlewareChain $preDispatchMiddleware = null,
+        MiddlewareChain $postDispatchMiddleware = null,
         ExceptionHandlerCollection $exceptionHandlerCollection = null
     )
     {
@@ -82,8 +81,8 @@ class RouteConfig implements \JsonSerializable
         ->setResponseParser($responseParser)
         ->setDescription($description)
         ->setDispatcher($dispatcher)
-        ->setPreDispatchMiddleware($preDispatchMiddleware ?? new PreDispatchMiddlewareCollection())
-        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new PostDispatchMiddlewareCollection())
+        ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareChain())
+        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareChain())
         ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection());
     }
 
@@ -154,23 +153,23 @@ class RouteConfig implements \JsonSerializable
     /**
      * @return ResponseParserInterface
      */
-    public function getResponseParser() : ResponseParserInterface
+    public function getResponseParser() : ?ResponseParserInterface
     {
         return $this->responseParser;
     }
 
     /**
-     * @return PreDispatchMiddlewareCollection
+     * @return MiddlewareChain
      */
-    public function getPreDispatchMiddleware() : PreDispatchMiddlewareCollection
+    public function getPreDispatchMiddleware() : MiddlewareChain
     {
         return $this->preDispatch;
     }
 
     /**
-     * @return PostDispatchMiddlewareCollection
+     * @return MiddlewareChain
      */
-    public function getPostDispatchMiddleware() : PostDispatchMiddlewareCollection
+    public function getPostDispatchMiddleware() : MiddlewareChain
     {
         return $this->postDispatch;
     }
@@ -199,7 +198,7 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    private function setResponseParser(ResponseParserInterface $parser) : self
+    private function setResponseParser(ResponseParserInterface $parser=null) : self
     {
         $this->responseParser = $parser;
         return $this;
@@ -270,22 +269,22 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @param PreDispatchMiddlewareCollection|null $preDispatch
+     * @param MiddlewareChain $chain
      * @return RouteConfig
      */
-    private function setPreDispatchMiddleware(PreDispatchMiddlewareCollection $preDispatch) : self
+    private function setPreDispatchMiddleware(MiddlewareChain $chain) : self
     {
-        $this->preDispatch = $preDispatch;
+        $this->preDispatch = $chain;
         return $this;
     }
 
     /**
-     * @param PostDispatchMiddlewareCollection|null $postDispatch
+     * @param MiddlewareChain $chain
      * @return RouteConfig
      */
-    private function setPostDispatchMiddleware(PostDispatchMiddlewareCollection $postDispatch) : self
+    private function setPostDispatchMiddleware(MiddlewareChain $chain) : self
     {
-        $this->postDispatch = $postDispatch;
+        $this->postDispatch = $chain;
         return $this;
     }
 

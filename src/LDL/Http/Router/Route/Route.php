@@ -4,15 +4,13 @@ namespace LDL\Http\Router\Route;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Dispatcher\FinalDispatcher;
 use LDL\Http\Router\Route\Config\RouteConfig;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareInterface;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareInterface;
 use LDL\Http\Router\Router;
 
 class Route implements RouteInterface
 {
+    public const CONTEXT_ROUTE_EXCEPTION = 'route_exception';
+
     /**
      * @var Router
      */
@@ -54,11 +52,12 @@ class Route implements RouteInterface
 
         $result = [];
 
-        $parser = $config->getResponseParser();
-
-        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
-
         try{
+            /**
+             * If any condition requires to abort the flow execution of the route, feel free
+             * to throw an exception in your middleware.
+             * Don't forget to add an exception handler for said exception.
+             */
             $preResult = $config->getPreDispatchMiddleware()->dispatch(
                 $this,
                 $request,
@@ -70,12 +69,6 @@ class Route implements RouteInterface
                 $result['pre'] = $preResult;
             }
 
-            $httpStatusCode = $response->getStatusCode();
-
-            if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-                return $result;
-            }
-
             $mainResult = $config->getDispatcher()->dispatch(
                 $request,
                 $response
@@ -85,40 +78,36 @@ class Route implements RouteInterface
                 $result['main'] = $mainResult;
             }
 
+            /**
+             * If any condition requires to abort the flow execution of the route, feel free
+             * to throw an exception in your middleware.
+             * Don't forget to add an exception handler for said exception.
+             */
             $postResult = $config->getPostDispatchMiddleware()->dispatch(
                 $this,
                 $request,
-                $response
+                $response,
+                $urlArgs
             );
 
             if($postResult){
                 $result['post'] = $postResult;
             }
 
-            $httpStatusCode = $response->getStatusCode();
-
-            if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-                $response->setContent($parser->parse($result));
-                return $result;
-            }
-
-            $config->getPostDispatchMiddleware()->dispatchFinal(
-                $this,
-                $request,
-                $response,
-                $result
-            );
-
         }catch(\Exception $e){
-
             /**
-             * Handle route specific exceptions, rethrow exception so global exceptions can
-             * also be executed.
+             * Handle route specific exceptions.
+             *
+             * If the exception was not handled by the route exception handler,
+             * the exception handler collection will rethrow the exception so the
+             * router exception handler gets executed.
              */
-            $this->config->getExceptionHandlerCollection()->handle($this->router, $e);
-
-            throw $e;
-
+            $this->config->getExceptionHandlerCollection()
+                ->handle(
+                    $this->router,
+                    $e,
+                    self::CONTEXT_ROUTE_EXCEPTION
+                );
         }
 
         return $result;

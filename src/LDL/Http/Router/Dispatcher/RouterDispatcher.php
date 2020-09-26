@@ -2,7 +2,6 @@
 
 namespace LDL\Http\Router\Dispatcher;
 
-use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
@@ -45,6 +44,7 @@ class RouterDispatcher {
     public function dispatch(string $httpMethod, string $uri)
     {
         $result = [];
+
         /**
          * @var Route $route
          */
@@ -57,6 +57,9 @@ class RouterDispatcher {
         $request = $this->router->getRequest();
         $response = $this->router->getResponse();
         $parser = $route->getConfig()->getResponseParser();
+        $parser = $parser ?? $this->router->getResponseParser();
+
+        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
         $preDispatch = $this->router->getPreDispatchMiddleware()->dispatch(
             $route,
@@ -68,14 +71,12 @@ class RouterDispatcher {
             $result['router']['pre'] = $preDispatch;
         }
 
-        $httpStatusCode = $response->getStatusCode();
-
-        if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-            $response->setContent($parser->parse($result));
-            return;
+        if($route) {
+            /**
+             * Dispatch route
+             */
+            $result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
         }
-
-        $result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
 
         $postDispatch = $this->router->getPostDispatchMiddleware()->dispatch(
             $route,
@@ -87,7 +88,13 @@ class RouterDispatcher {
             $result['router']['post'] = $postDispatch;
         }
 
-        $response->setContent($parser->parse($result));
+        $response->setContent(
+            $parser->parse(
+                $result,
+                Router::CONTEXT_ROUTER_POST_DISPATCH,
+                $this->router
+            )
+        );
     }
 
     /**

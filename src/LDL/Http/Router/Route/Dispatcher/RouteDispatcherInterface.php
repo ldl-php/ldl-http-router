@@ -10,5 +10,5 @@ interface RouteDispatcherInterface
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response
-    );
+    ) :?array;
 }

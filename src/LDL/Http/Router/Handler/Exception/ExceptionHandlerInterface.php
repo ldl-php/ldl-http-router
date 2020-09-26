@@ -2,34 +2,18 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
+use LDL\Framework\Contracts\IsActiveInterface;
+use LDL\Framework\Contracts\NamespaceInterface;
+use LDL\Framework\Contracts\PriorityInterface;
 use LDL\Http\Router\Router;
 
-interface ExceptionHandlerInterface
+interface ExceptionHandlerInterface extends NamespaceInterface, PriorityInterface, IsActiveInterface
 {
-    /**
-     * @return string
-     */
-    public function getNamespace() : string;
-
-    /**
-     * @return string
-     */
-    public function getName() : string;
-
-    /**
-     * @return int
-     */
-    public function getPriority() : int;
-
-    /**
-     * @return bool
-     */
-    public function isActive() : bool;
-
     /**
      * @param Router $router
      * @param \Exception $e
+     * @param string $context
      * @return int|null
      */
-    public function handle(Router $router, \Exception $e) : ?int;
+    public function handle(Router $router, \Exception $e, string $context) : ?int;
 }

@@ -50,7 +50,7 @@ class HttpRouteNotFoundExceptionHandler implements ExceptionHandlerInterface
         return $this->isActive;
     }
 
-    public function handle(Router $router, \Exception $e): ?int
+    public function handle(Router $router, \Exception $e, string $context) : ?int
     {
         return $e instanceof HttpRouteNotFoundException ? ResponseInterface::HTTP_CODE_NOT_FOUND : null;
     }

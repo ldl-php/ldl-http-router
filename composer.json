@@ -5,6 +5,7 @@
     "require": {
         "ext-json": "*",
         "phroute/phroute": "~2.1",
+        "ldl-framework/ldl-contracts": "dev-master",
         "ldl-framework/http-core": "dev-master",
         "ldl-framework/typed-collection": "^0.0.2",
         "symfony/string": "^5.1",

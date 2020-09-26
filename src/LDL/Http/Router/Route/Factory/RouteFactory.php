@@ -6,7 +6,7 @@ namespace LDL\Http\Router\Route\Factory;
 
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Helper\ClassOrContainer;
-use LDL\Http\Router\Response\Parser\JsonResponseParser;
+use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
@@ -14,8 +14,8 @@ use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Route\Factory\Exception\SchemaException;
 use LDL\Http\Router\Route\Group\RouteCollection;
-use LDL\Http\Router\Middleware\PreDispatchMiddlewareCollection;
-use LDL\Http\Router\Middleware\PostDispatchMiddlewareCollection;
+use LDL\Http\Router\Middleware\PreDispatchMiddlewareChain;
+use LDL\Http\Router\Middleware\PostDispatchMiddlewareChain;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use Psr\Container\ContainerInterface;
@@ -32,14 +32,14 @@ class RouteFactory
         RouteConfigParserCollection $parserCollection = null
     ): RouteCollection {
         if (!file_exists($file)) {
-            $msg = "Schema file: \"$file\" was not found";
+            $msg = "Route config file: \"$file\" was not found";
             throw new Exception\SchemaFileError($msg);
         }
 
         self::$file = $file;
 
         if (!is_readable($file)) {
-            $msg = "Could not read route schema file \"$file\", permission denied!";
+            $msg = "Could not read route config file \"$file\", permission denied!";
             throw new Exception\SchemaFileError(self::exceptionMessage([$msg]));
         }
 
@@ -96,8 +96,8 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
-                self::getResponseParser($route),
                 self::getDispatcher($route, $container),
+                self::getResponseParser($route),
                 self::getMiddleware($route, 'predispatch', $container),
                 self::getPostDispatchMiddleware($route, 'postdispatch', $container),
                 self::getHandlerExceptionParser($route)
@@ -128,14 +128,14 @@ class RouteFactory
      * @throws \LDL\Http\Router\Helper\Exception\SectionNotFoundException
      * @throws \LDL\Http\Router\Helper\Exception\UndefinedContainerException
      */
-    private static function getResponseParser(array $route) : ResponseParserInterface
+    private static function getResponseParser(array $route) : ?ResponseParserInterface
     {
         if(false === array_key_exists('response', $route)){
-            return new JsonResponseParser();
+            return null;
         }
 
         if(false === array_key_exists('parser', $route['response'])){
-            return new JsonResponseParser();
+            return null;
         }
 
         $return = ClassOrContainer::get($route['response']['parser']);
@@ -192,7 +192,7 @@ class RouteFactory
         array $route,
         string $middlewareType,
         ContainerInterface $container = null
-    ): ?PreDispatchMiddlewareCollection {
+    ): ?PreDispatchMiddlewareChain {
         if (!array_key_exists($middlewareType, $route)) {
             return null;
         }
@@ -209,7 +209,7 @@ class RouteFactory
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        $collection = new PreDispatchMiddlewareCollection();
+        $collection = new PreDispatchMiddlewareChain();
 
         foreach ($middlewareList as $dispatcher) {
             $instance = ClassOrContainer::get($dispatcher, $container);
@@ -227,7 +227,7 @@ class RouteFactory
         array $route,
         string $middlewareType,
         ContainerInterface $container = null
-    ): ?PostDispatchMiddlewareCollection {
+    ): ?PostDispatchMiddlewareChain {
         if (!array_key_exists($middlewareType, $route)) {
             return null;
         }
@@ -244,7 +244,7 @@ class RouteFactory
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        $collection = new PostDispatchMiddlewareCollection();
+        $collection = new PostDispatchMiddlewareChain();
 
         foreach ($middlewareList as $dispatcher) {
             $instance = ClassOrContainer::get($dispatcher, $container);
