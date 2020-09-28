@@ -2,9 +2,10 @@
 
 namespace LDL\Http\Router\Response\Parser;
 
+use LDL\Framework\Contracts\NamespaceInterface;
 use LDL\Http\Router\Router;
 
-interface ResponseParserInterface
+interface ResponseParserInterface extends NamespaceInterface
 {
     /**
      * @return string

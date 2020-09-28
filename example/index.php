@@ -18,6 +18,8 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
+
 use Psr\Container\ContainerInterface;
 
 class Dispatcher implements RouteDispatcherInterface

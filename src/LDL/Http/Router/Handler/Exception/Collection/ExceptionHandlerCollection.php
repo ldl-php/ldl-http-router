@@ -71,7 +71,8 @@ class ExceptionHandlerCollection extends AbstractCollection
 
         $currentRoute = $router->getCurrentRoute();
 
-        $parser = $currentRoute ? $currentRoute->getConfig()->getResponseParser() : $router->getResponseParser();
+        $defaultResponseParser = $router->getResponseParserRepository()->getLast();
+        $parser = $currentRoute ? $currentRoute->getConfig()->getResponseParser() : $defaultResponseParser;
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler

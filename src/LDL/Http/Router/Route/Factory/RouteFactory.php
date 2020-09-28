@@ -97,7 +97,7 @@ class RouteFactory
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
                 self::getDispatcher($route, $container),
-                self::getResponseParser($route),
+                self::getResponseParser($route, $router),
                 self::getMiddleware($route, 'predispatch', $container),
                 self::getPostDispatchMiddleware($route, 'postdispatch', $container),
                 self::getHandlerExceptionParser($route)
@@ -122,34 +122,24 @@ class RouteFactory
 
     /**
      * @param array $route
-     * @return ResponseParserInterface
-     * @throws SchemaException
-     * @throws \LDL\Http\Router\Helper\Exception\ClassNotFoundException
-     * @throws \LDL\Http\Router\Helper\Exception\SectionNotFoundException
-     * @throws \LDL\Http\Router\Helper\Exception\UndefinedContainerException
+     * @param Router $router
+     * @return ResponseParserInterface|null
+     * @throws \LDL\Type\Collection\Exception\UndefinedOffsetException
      */
-    private static function getResponseParser(array $route) : ?ResponseParserInterface
+    private static function getResponseParser(array $route, Router $router) : ResponseParserInterface
     {
+        $default = $router->getResponseParserRepository()->getLast();
+
         if(false === array_key_exists('response', $route)){
-            return null;
+            return $default;
         }
 
         if(false === array_key_exists('parser', $route['response'])){
-            return null;
+            return $default;
         }
 
-        $return = ClassOrContainer::get($route['response']['parser']);
-
-        if($return instanceof ResponseParserInterface) {
-            return $return;
-        }
-
-        $msg = sprintf(
-            'Response parser must be an instance of interface "%s", instance of "%s" was given',
-            ResponseParserInterface::class,
-            get_class($return)
-        );
-        throw new Exception\SchemaException(self::exceptionMessage([$msg]));
+        return $router->getResponseParserRepository()
+            ->offsetGet($route['response']['parser']);
     }
 
     private static function getUrlPrefix(array $route): string

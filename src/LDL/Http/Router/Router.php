@@ -9,6 +9,7 @@ use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
+use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
@@ -57,17 +58,17 @@ class Router
     private $postDispatch;
 
     /**
-     * @var ResponseParserInterface
+     * @var ResponseParserRepository
      */
-    private $responseParser;
+    private $responseParserRepository;
 
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
+        ResponseParserRepository $responseParserRepository = null,
         MiddlewareChainInterface $preDispatchMiddlewareChain = null,
-        MiddlewareChainInterface $postDispatchMiddlewareChain = null,
-        ResponseParserInterface $responseParser = null
+        MiddlewareChainInterface $postDispatchMiddlewareChain = null
     )
     {
         $this->collector = new RouteCollector();
@@ -76,7 +77,14 @@ class Router
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
         $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
         $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
-        $this->responseParser = $responseParser ?? new JsonResponseParser();
+
+        $this->responseParserRepository = $responseParserRepository;
+
+        if(null === $responseParserRepository){
+            $this->responseParserRepository = new ResponseParserRepository();
+            $this->responseParserRepository->append(new JsonResponseParser());
+        }
+
     }
 
     /**
@@ -135,9 +143,9 @@ class Router
         return $this->currentRoute;
     }
 
-    public function getResponseParser() : ?ResponseParserInterface
+    public function getResponseParserRepository() : ResponseParserRepository
     {
-        return $this->responseParser;
+        return $this->responseParserRepository;
     }
 
     public function dispatch() : ResponseInterface

@@ -7,7 +7,19 @@ use LDL\Http\Router\Router;
 
 class JsonResponseParser implements ResponseParserInterface
 {
+    public const NAMESPACE = 'ldl.response.parser';
+    public const NAME = 'json';
     public const RESPONSE_CONTENT_TYPE = 'application/json';
+
+    public function getNamespace(): string
+    {
+        return self::NAMESPACE;
+    }
+
+    public function getName(): string
+    {
+        return self::NAME;
+    }
 
     /**
      * @var string
