@@ -6,11 +6,17 @@
 
 namespace LDL\Http\Router\Middleware;
 
+use LDL\Framework\Base\Contracts\IsActiveInterface;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
+use LDL\Type\Collection\Interfaces\CollectionInterface;
+use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
+use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
+use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
+use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
 
-interface MiddlewareChainInterface
+interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, NamespaceableInterface, PrioritySortingInterface, FilterByActiveStateInterface
 {
     public const CONTEXT_PRE_DISPATCH = 'preDispatch';
     public const CONTEXT_POST_DISPATCH = 'postDispatch';
@@ -22,25 +28,6 @@ interface MiddlewareChainInterface
      * @return MiddlewareInterface
      */
     public function getLastExecutedDispatcher() : MiddlewareInterface;
-
-    /**
-     * Obtains a middleware by namespace and name, throws an exception if the middleware could not be found
-     *
-     * @param string $namespace
-     * @param string $name
-     * @throws Exception\MiddlewareNotFoundException
-     * @return MiddlewareInterface
-     */
-    public function getMiddleware(string $namespace, string $name) : MiddlewareInterface;
-
-    /**
-     * Sorts the dispatcher collection according to the priority set in each dispatcher
-     *
-     * @see MiddlewareInterface
-     * @param string $order
-     * @return MiddlewareChainInterface
-     */
-    public function sort(string $order = 'asc'): MiddlewareChainInterface;
 
     /**
      * Obtains the result of a dispatched chain, throws exception if the chain has not been dispatched

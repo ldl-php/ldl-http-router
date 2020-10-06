@@ -2,9 +2,9 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
-use LDL\Framework\Contracts\IsActiveInterface;
-use LDL\Framework\Contracts\NamespaceInterface;
-use LDL\Framework\Contracts\PriorityInterface;
+use LDL\Framework\Base\Contracts\IsActiveInterface;
+use LDL\Framework\Base\Contracts\NamespaceInterface;
+use LDL\Framework\Base\Contracts\PriorityInterface;
 use LDL\Http\Router\Router;
 
 interface ExceptionHandlerInterface extends NamespaceInterface, PriorityInterface, IsActiveInterface

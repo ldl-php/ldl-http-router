@@ -6,11 +6,23 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
+use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
+use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
+use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
+use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
+use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
 
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
 {
+
+    use NamespaceableTrait;
+    use ValueValidatorChainTrait;
+    use PrioritySortingTrait;
+    use FilterByInterfaceTrait;
+    use FilterByActiveStateTrait;
+
     /**
      * @var MiddlewareInterface
      */
@@ -25,6 +37,15 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      * @var array
      */
     private $result = [];
+
+    public function __construct(iterable $items = null)
+    {
+        parent::__construct($items);
+
+        $this->getValidatorChain()
+            ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class))
+            ->lock();
+    }
 
     /**
      * {@inheritdoc}
@@ -60,59 +81,9 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         return $this->lastExecuted;
     }
 
-    public function getMiddleware(string $namespace, string $name): MiddlewareInterface
-    {
-        /**
-         * @var MiddlewareInterface $middleware
-         */
-        foreach($this as $middleware){
-            if($middleware->getNamespace() === $namespace && $middleware->getName() === $name){
-                return $middleware;
-            }
-        }
-
-        $msg = "Middleware with namespace: \"$namespace\" and name: \"$name\" could not be found";
-        throw new Exception\MiddlewareNotFoundException($msg);
-    }
-
-    /**
-     * @param MiddlewareInterface $item
-     * @param null $key
-     * @return CollectionInterface
-     */
     public function append($item, $key = null): CollectionInterface
     {
         return parent::append($item, $key ?? \spl_object_hash($item));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function sort(string $order = 'asc'): MiddlewareChainInterface
-    {
-        if (!in_array($order, ['asc', 'desc'])) {
-            throw new \LogicException('Order must be one of "asc" or "desc"');
-        }
-
-        $items = \iterator_to_array($this);
-
-        usort(
-            $items,
-            /**
-             * @var MiddlewareChain $a
-             * @var MiddlewareChain $b
-             *
-             * @return bool
-             */
-            static function ($a, $b) use ($order) {
-                $prioA = $a->getPriority();
-                $prioB = $b->getPriority();
-
-                return 'asc' === $order ? $prioA <=> $prioB : $prioB <=> $prioA;
-            }
-        );
-
-        return new static($items);
     }
 
     /**
@@ -131,10 +102,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         /**
          * @var MiddlewareInterface $dispatch
          */
-        foreach ($this->sort('asc') as $dispatch) {
-            if (false === $dispatch->isActive()) {
-                continue;
-            }
+        foreach ($this as $dispatch) {
 
             $result = $dispatch->dispatch(
                 $route,
@@ -162,23 +130,6 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         $this->result = $return;
 
         return $return;
-    }
-
-    public function validateItem($item): void
-    {
-        parent::validateItem($item);
-
-        if ($item instanceof MiddlewareInterface) {
-            return;
-        }
-
-        $msg = sprintf(
-            '"%s" item must be an instance of "%s"',
-            __CLASS__,
-            MiddlewareInterface::class
-        );
-
-        throw new TypeMismatchException($msg);
     }
 
 }

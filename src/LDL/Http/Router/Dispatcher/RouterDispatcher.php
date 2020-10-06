@@ -4,6 +4,7 @@ namespace LDL\Http\Router\Dispatcher;
 
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
+use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\Exception\HttpRouteNotFoundException;
 use Phroute\Phroute\RouteDataInterface;
@@ -56,16 +57,29 @@ class RouterDispatcher {
 
         $request = $this->router->getRequest();
         $response = $this->router->getResponse();
-        $parser = $route->getConfig()->getResponseParser();
-        $parser = $parser ?? $this->router->getResponseParser();
+
+        /**
+         * If the route contains a response parser, use the response parser configured in the route
+         */
+        if($route->getConfig()->getResponseParser()){
+            $this->router->getResponseParserRepository()->select($route->getConfig()->getResponseParser());
+        }
+
+        $this->router->getResponseParserRepository()->lockSelection();
+
+        $parser = $this->router->getResponseParserRepository()->getSelectedItem();
 
         $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
-        $preDispatch = $this->router->getPreDispatchMiddleware()->dispatch(
-            $route,
-            $request,
-            $response
-        );
+        $preDispatch = $this->router
+            ->getPreDispatchMiddleware()
+            ->sortByPriority(PrioritySortingInterface::SORT_ASCENDING)
+            ->filterByActiveState()
+            ->dispatch(
+                $route,
+                $request,
+                $response
+            );
 
         if(count($preDispatch)){
             $result['router']['pre'] = $preDispatch;
@@ -78,11 +92,15 @@ class RouterDispatcher {
             $result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
         }
 
-        $postDispatch = $this->router->getPostDispatchMiddleware()->dispatch(
-            $route,
-            $this->router->getRequest(),
-            $this->router->getResponse()
-        );
+        $postDispatch = $this->router
+            ->getPostDispatchMiddleware()
+            ->filterByActiveState()
+            ->sortByPriority(PrioritySortingInterface::SORT_ASCENDING)
+            ->dispatch(
+                $route,
+                $this->router->getRequest(),
+                $this->router->getResponse()
+            );
 
         if(count($postDispatch)){
             $result['router']['post'] = $postDispatch;

@@ -1,26 +1,19 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Config\Parser;
 
 use LDL\Type\Collection\Types\Object\ObjectCollection;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
 
 class RouteConfigParserCollection extends ObjectCollection
 {
-    public function validateItem($item): void
+    public function __construct(iterable $items = null)
     {
-        parent::validateItem($item);
+        parent::__construct($items);
 
-        if($item instanceof RouteConfigParserInterface){
-            return;
-        }
-
-        $msg = sprintf(
-            '"%s" item must be an instance of "%s"',
-            __CLASS__,
-            RouteConfigParserInterface::class
-        );
-
-        throw new TypeMismatchException($msg);
+        $this->getValidatorChain()
+            ->append(new InterfaceComplianceItemValidator(RouteConfigParserInterface::class))
+            ->lock();
     }
+
 }

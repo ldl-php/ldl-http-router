@@ -3,34 +3,20 @@
 namespace LDL\Http\Router\Repository;
 
 use LDL\Type\Collection\AbstractCollection;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
+use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
+use LDL\Type\Collection\Validator\File\ReadableFileValidator;
 
-class JsonRepository extends AbstractCollection implements JsonRepositoryInterface
+class JsonRepository extends AbstractCollection implements JsonRepositoryInterface, HasValidatorChainInterface
 {
-    /**
-     * @param $file
-     * @throws Exception\JsonNotFoundException
-     * @throws Exception\JsonUnreadableException
-     * @throws TypeMismatchException
-     */
-    public function validateItem($file): void
+    use ValueValidatorChainTrait;
+
+    public function __construct(iterable $items = null)
     {
-        if(!is_string($file)){
-            $msg = sprintf(
-                'Item must be a string, "%s" was given',
-                gettype($file)
-            );
-            throw new TypeMismatchException($msg);
-        }
-
-        if(!file_exists($file)){
-            $msg = "Json file \"$file\" not found!";
-            throw new Exception\JsonNotFoundException($msg);
-        }
-
-        if(!is_readable($file)){
-            $msg = "Could not read json file: \"$file\", permission denied";
-            throw new Exception\JsonUnreadableException($msg);
-        }
+        parent::__construct($items);
+        $this->getValidatorChain()
+            ->append(new ReadableFileValidator())
+            ->lock();
     }
+
 }

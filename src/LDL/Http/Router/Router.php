@@ -80,11 +80,14 @@ class Router
 
         $this->responseParserRepository = $responseParserRepository;
 
-        if(null === $responseParserRepository){
-            $this->responseParserRepository = new ResponseParserRepository();
-            $this->responseParserRepository->append(new JsonResponseParser());
+        if(null !== $responseParserRepository){
+            return;
         }
 
+        $jsonParser = new JsonResponseParser();
+        $this->responseParserRepository = new ResponseParserRepository();
+        $this->responseParserRepository->append($jsonParser);
+        $this->responseParserRepository->select(ResponseParserRepository::createStorageKey($jsonParser));
     }
 
     /**

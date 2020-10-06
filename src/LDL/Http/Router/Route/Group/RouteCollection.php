@@ -4,23 +4,15 @@ namespace LDL\Http\Router\Route\Group;
 
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
+use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
 
 class RouteCollection extends ObjectCollection
 {
-    public function validateItem($item): void
+    public function __construct(iterable $items = null)
     {
-        parent::validateItem($item);
-
-        if($item instanceof RouteInterface){
-            return;
-        }
-
-        $msg = sprintf(
-            'Expected instance of type: "%s", instance of type: "%s" was given',
-            RouteInterface::class,
-            get_class($item)
-        );
-
-        throw new Exception\InvalidRouteObject($msg);
+        parent::__construct($items);
+        $this->getValidatorChain()
+            ->append(new InterfaceComplianceItemValidator(RouteInterface::class))
+            ->lock();
     }
 }

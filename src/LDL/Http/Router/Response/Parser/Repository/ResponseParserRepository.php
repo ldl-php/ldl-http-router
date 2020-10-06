@@ -2,55 +2,37 @@
 
 namespace LDL\Http\Router\Response\Parser\Repository;
 
+use LDL\Framework\Base\Contracts\NamespaceInterface;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Type\Collection\Interfaces;
+use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
+use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
-use LDL\Type\Exception\TypeMismatchException;
+use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use LDL\Type\Collection\Validator\UniqueKeyValidator;
 
-class ResponseParserRepository extends ObjectCollection
+class ResponseParserRepository extends ObjectCollection implements ResponseParserRepositoryInterface
 {
-    private $last;
+    use NamespaceableTrait;
+    use SingleSelectionTrait;
 
-    /**
-     * @param ResponseParserInterface $item
-     * @param string|int|null $key
-     * @return Interfaces\CollectionInterface
-     */
+    public function __construct(iterable $items = null)
+    {
+        parent::__construct($items);
+
+        $this->getValidatorChain()
+            ->append(new InterfaceComplianceItemValidator(ResponseParserInterface::class))
+            ->append(new UniqueKeyValidator())
+            ->lock();
+    }
+
+    public static function createStorageKey(NamespaceInterface $item) : string
+    {
+        return strtolower(sprintf('%s.%s', $item->getNamespace(), $item->getName()));
+    }
+
     public function append($item, $key = null): Interfaces\CollectionInterface
     {
-        $name = strtolower(implode('.', [$item->getNamespace(), $item->getName()]));
-        $this->last = $name;
-        return parent::append($item, $name);
-    }
-
-    public function getLast() : ResponseParserInterface
-    {
-        if(null === $this->last){
-            throw new \RuntimeException('No response parsers were added to this repository');
-        }
-
-        return $this->offsetGet($this->last);
-    }
-
-    /**
-     * @param $item
-     * @throws TypeMismatchException
-     */
-    public function validateItem($item): void
-    {
-        parent::validateItem($item);
-
-        if($item instanceof ResponseParserInterface){
-            return;
-        }
-
-        $msg = sprintf(
-            '"%s" expects an instance of "%s", instance of "%s" was given',
-            __CLASS__,
-            ResponseParserInterface::class,
-            get_class($item)
-        );
-
-        throw new TypeMismatchException($msg);
+        return parent::append($item, self::createStorageKey($item));
     }
 }
