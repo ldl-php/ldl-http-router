@@ -7,6 +7,7 @@ use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Type\Collection\Interfaces;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
+use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
 use LDL\Type\Collection\Validator\UniqueKeyValidator;
@@ -15,6 +16,7 @@ class ResponseParserRepository extends ObjectCollection implements ResponseParse
 {
     use NamespaceableTrait;
     use SingleSelectionTrait;
+    use KeyValidatorChainTrait;
 
     public function __construct(iterable $items = null)
     {
@@ -22,8 +24,10 @@ class ResponseParserRepository extends ObjectCollection implements ResponseParse
 
         $this->getValidatorChain()
             ->append(new InterfaceComplianceItemValidator(ResponseParserInterface::class))
-            ->append(new UniqueKeyValidator())
             ->lock();
+
+        $this->getKeyValidatorChain()
+            ->append(new UniqueKeyValidator());
     }
 
     public static function createStorageKey(NamespaceInterface $item) : string
