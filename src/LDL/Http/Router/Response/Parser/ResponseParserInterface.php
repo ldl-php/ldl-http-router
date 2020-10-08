@@ -1,11 +1,12 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Response\Parser;
 
 use LDL\Framework\Base\Contracts\NamespaceInterface;
 use LDL\Http\Router\Router;
+use LDL\Type\Collection\Types\Object\Interfaces\KeyResolverInterface;
 
-interface ResponseParserInterface extends NamespaceInterface
+interface ResponseParserInterface extends NamespaceInterface, KeyResolverInterface
 {
     /**
      * @return string

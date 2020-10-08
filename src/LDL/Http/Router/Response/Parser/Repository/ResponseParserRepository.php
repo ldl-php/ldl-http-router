@@ -2,9 +2,7 @@
 
 namespace LDL\Http\Router\Response\Parser\Repository;
 
-use LDL\Framework\Base\Contracts\NamespaceInterface;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
-use LDL\Type\Collection\Interfaces;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
@@ -28,15 +26,5 @@ class ResponseParserRepository extends ObjectCollection implements ResponseParse
 
         $this->getKeyValidatorChain()
             ->append(new UniqueKeyValidator());
-    }
-
-    public static function createStorageKey(NamespaceInterface $item) : string
-    {
-        return strtolower(sprintf('%s.%s', $item->getNamespace(), $item->getName()));
-    }
-
-    public function append($item, $key = null): Interfaces\CollectionInterface
-    {
-        return parent::append($item, self::createStorageKey($item));
     }
 }

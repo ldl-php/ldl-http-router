@@ -1,11 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Response\Parser\Json;
 
-use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Router;
+use LDL\Http\Router\Response\Parser\AbstractResponseParser;
 
-class JsonResponseParser implements ResponseParserInterface
+class JsonResponseParser extends AbstractResponseParser
 {
     public const NAMESPACE = 'ldl.response.parser';
     public const NAME = 'json';
