@@ -87,7 +87,7 @@ class Router
         $jsonParser = new JsonResponseParser();
         $this->responseParserRepository = new ResponseParserRepository();
         $this->responseParserRepository->append($jsonParser);
-        $this->responseParserRepository->select(ResponseParserRepository::createStorageKey($jsonParser));
+        $this->responseParserRepository->select($jsonParser->getItemKey());
     }
 
     /**
