@@ -17,6 +17,7 @@ interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, Pri
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param array $urlArguments
+     * @return array|null
      */
     public function dispatch(
         Route $route,

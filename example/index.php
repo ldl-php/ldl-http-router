@@ -61,9 +61,9 @@ class PreDispatch implements MiddlewareInterface
         RequestInterface $request,
         ResponseInterface $response,
         array $urlArgs = []
-    )
+    ) : ?array
     {
-        return 'pre dispatch result!';
+        return ['pre dispatch result!'];
     }
 }
 
@@ -94,9 +94,9 @@ class PostDispatch implements MiddlewareInterface
         RequestInterface $request,
         ResponseInterface $response,
         array $urlArguments = []
-    )
+    ) : ?array
     {
-        return 'post dispatch result!';
+        return ['post dispatch result!'];
     }
 }
 
