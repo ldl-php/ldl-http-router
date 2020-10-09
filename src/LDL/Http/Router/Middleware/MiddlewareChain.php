@@ -97,7 +97,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     ) : array
     {
         $this->isDispatched = true;
-        $return = [];
+        $this->result = [];
 
         /**
          * @var MiddlewareInterface $dispatch
@@ -114,9 +114,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
             $this->lastExecuted = $dispatch;
 
             if(null !== $result){
-                $return[$dispatch->getNamespace()] = [
-                    $dispatch->getName() => $result
-                ];
+                $this->result[$dispatch->getNamespace()][$dispatch->getName()] = $result;
             }
 
             $httpStatusCode = $response->getStatusCode();
@@ -124,12 +122,9 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
             if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
                 break;
             }
-
         }
 
-        $this->result = $return;
-
-        return $return;
+        return $this->result;
     }
 
 }

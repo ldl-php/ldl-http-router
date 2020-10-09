@@ -23,6 +23,6 @@ interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, Pri
         RequestInterface $request,
         ResponseInterface $response,
         array $urlArguments = []
-    );
+    ) : ?array;
 
 }

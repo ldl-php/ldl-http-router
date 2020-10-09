@@ -3,7 +3,7 @@
 namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
-use LDL\Http\Router\Handler\Exception\ModifiesResponseContentInterface;
+use LDL\Http\Router\Handler\Exception\ModifiesResponseInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
@@ -40,6 +40,7 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
         $response = $router->getResponse();
 
         $parser = $router->getResponseParserRepository()->getSelectedItem();
+        $contentModified = false;
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler
@@ -52,10 +53,12 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
 
             $httpStatusCode = $exceptionHandler->handle($router, $exception, $context);
 
-            if($exceptionHandler instanceof ModifiesResponseContentInterface){
+            if($exceptionHandler instanceof ModifiesResponseInterface){
                 $response->setContent(
                     $parser ? $parser->parse($exceptionHandler->getContent(), $context, $router) : $exception->getMessage()
                 );
+
+                $contentModified = true;
             }
 
             if(null === $httpStatusCode) {
@@ -63,6 +66,16 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
             }
 
             $response->setStatusCode($httpStatusCode);
+
+            if(false === $contentModified){
+                $response->setContent(
+                    $parser ? $parser->parse(
+                        ['error' => $exception->getMessage()],
+                        $context,
+                        $router
+                    ) : $exception->getMessage()
+                );
+            }
 
             return;
         }

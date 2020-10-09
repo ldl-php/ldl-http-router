@@ -2,6 +2,7 @@
 
 namespace LDL\Http\Router\Dispatcher;
 
+use LDL\Http\Router\Exception\UndispatchedRouterException;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
@@ -16,6 +17,8 @@ class RouterDispatcher {
     private $variableRouteData;
 
     private $router;
+
+    private $result;
 
     public $matchedRoute;
 
@@ -38,13 +41,27 @@ class RouterDispatcher {
     }
 
     /**
+     * @return array
+     * @throws UndispatchedRouterException
+     */
+    public function getResult() : array
+    {
+        if(null === $this->result){
+            $msg = 'You can not obtain the result of an "undispatched" router';
+            throw new UndispatchedRouterException($msg);
+        }
+
+        return $this->result;
+    }
+
+    /**
      * @param string $httpMethod
      * @param string $uri
      * @throws \Exception
      */
     public function dispatch(string $httpMethod, string $uri)
     {
-        $result = [];
+        $this->result = [];
 
         /**
          * @var Route $route
@@ -82,14 +99,14 @@ class RouterDispatcher {
             );
 
         if(count($preDispatch)){
-            $result['router']['pre'] = $preDispatch;
+            $this->result['router']['pre'] = $preDispatch;
         }
 
         if($route) {
             /**
              * Dispatch route
              */
-            $result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
+            $this->result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
         }
 
         $postDispatch = $this->router
@@ -103,12 +120,12 @@ class RouterDispatcher {
             );
 
         if(count($postDispatch)){
-            $result['router']['post'] = $postDispatch;
+            $this->result['router']['post'] = $postDispatch;
         }
 
         $response->setContent(
             $parser->parse(
-                $result,
+                $this->result,
                 Router::CONTEXT_ROUTER_POST_DISPATCH,
                 $this->router
             )

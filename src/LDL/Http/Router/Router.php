@@ -62,6 +62,11 @@ class Router
      */
     private $responseParserRepository;
 
+    /**
+     * @var RouterDispatcher
+     */
+    private $dispatcher;
+
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
@@ -151,15 +156,20 @@ class Router
         return $this->responseParserRepository;
     }
 
+    public function getDispatcher() : RouterDispatcher
+    {
+        return $this->dispatcher;
+    }
+
     public function dispatch() : ResponseInterface
     {
         try {
-            $dispatcher = new RouterDispatcher(
+            $this->dispatcher = new RouterDispatcher(
                 $this->collector->getData(),
                 $this
             );
 
-            $dispatcher->dispatch(
+            $this->dispatcher->dispatch(
                 $this->request->getMethod(),
                 parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );

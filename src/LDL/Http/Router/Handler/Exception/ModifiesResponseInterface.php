@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
-interface ModifiesResponseContentInterface
+interface ModifiesResponseInterface
 {
     public function getContent() : array;
 }
