@@ -2,28 +2,15 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
+use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
+use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
+use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
+
 abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
 {
-
-    /**
-     * @var bool
-     */
-    private $active;
-
-    /**
-     * @var string
-     */
-    private $namespace;
-
-    /**
-     * @var string
-     */
-    private $name;
-
-    /**
-     * @var int
-     */
-    private $priority;
+    use NamespaceInterfaceTrait;
+    use PriorityInterfaceTrait;
+    use IsActiveInterfaceTrait;
 
     public function __construct(
         string $namespace,
@@ -32,42 +19,9 @@ abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
         bool $isActive
     )
     {
-        $this->namespace = $namespace;
-        $this->name = $name;
-        $this->active = $isActive;
-        $this->priority = $priority;
+        $this->_tNamespace = $namespace;
+        $this->_tName = $name;
+        $this->_tActive = $isActive;
+        $this->_tPriority = $priority;
     }
-
-    /**
-     * @return string
-     */
-    public function getNamespace(): string
-    {
-        return $this->namespace;
-    }
-
-    /**
-     * @return string
-     */
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    /**
-     * @return int
-     */
-    public function getPriority(): int
-    {
-        return $this->priority;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isActive(): bool
-    {
-        return $this->active;
-    }
-
 }

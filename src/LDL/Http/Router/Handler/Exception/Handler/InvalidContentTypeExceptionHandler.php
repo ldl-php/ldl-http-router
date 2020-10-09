@@ -2,6 +2,9 @@
 
 namespace LDL\Http\Router\Handler\Exception\Handler;
 
+use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
+use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
+use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Route\Exception\InvalidContentTypeException;
@@ -14,40 +17,16 @@ class InvalidContentTypeExceptionHandler implements ExceptionHandlerInterface
     private const DEFAULT_IS_ACTIVE = true;
     private const DEFAULT_PRIORITY = 1;
 
-    /**
-     * @var bool
-     */
-    private $isActive;
-
-    /**
-     * @var int
-     */
-    private $priority;
+    use NamespaceInterfaceTrait;
+    use PriorityInterfaceTrait;
+    use IsActiveInterfaceTrait;
 
     public function __construct(bool $isActive = null, int $priority = null)
     {
-        $this->isActive = $isActive ?? self::DEFAULT_IS_ACTIVE;
-        $this->priority = $priority ?? self::DEFAULT_PRIORITY;
-    }
-
-    public function getNamespace(): string
-    {
-        return self::NAMESPACE;
-    }
-
-    public function getName(): string
-    {
-        return self::NAME;
-    }
-
-    public function getPriority(): int
-    {
-        return $this->priority;
-    }
-
-    public function isActive(): bool
-    {
-        return $this->isActive;
+        $this->_tNamespace = self::NAMESPACE;
+        $this->_tName = self::NAME;
+        $this->_tActive = $isActive ?? self::DEFAULT_IS_ACTIVE;
+        $this->_tPriority = $priority ?? self::DEFAULT_PRIORITY;
     }
 
     public function handle(Router $router, \Exception $e, string $context): ?int
