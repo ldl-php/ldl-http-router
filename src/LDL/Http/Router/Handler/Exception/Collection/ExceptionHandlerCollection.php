@@ -50,13 +50,13 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
                 continue;
             }
 
+            $httpStatusCode = $exceptionHandler->handle($router, $exception, $context);
+
             if($exceptionHandler instanceof ModifiesResponseContentInterface){
                 $response->setContent(
                     $parser ? $parser->parse($exceptionHandler->getContent(), $context, $router) : $exception->getMessage()
                 );
             }
-
-            $httpStatusCode = $exceptionHandler->handle($router, $exception, $context);
 
             if(null === $httpStatusCode) {
                 continue;
