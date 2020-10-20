@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Factory;
 
+use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Helper\ClassOrContainer;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
-use LDL\Http\Router\Route\Factory\Exception\InvalidSectionException;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
@@ -89,6 +88,24 @@ class RouteFactory
                 throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
             }
 
+            $parsers = null;
+
+            if($parserCollection){
+                $parsers = clone($parserCollection);
+
+                $parsers->init(
+                    $route,
+                    $container,
+                    self::$file
+                );
+            }
+
+            /**
+             * Parse basic settings for the route, such as request url, method, version, etc
+             * To avoid extra overhead, extra configuration parsers will be parse when the route is dispatched.
+             *
+             * @see RouterDispatcher
+             */
             $config = new RouteConfig(
                 array_key_exists('method', $route['request']) ? $route['request']['method'] : '',
                 array_key_exists('version', $route) ? $route['version'] : '',
@@ -99,21 +116,11 @@ class RouteFactory
                 self::getResponseParser($route, $router),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_PRE_DISPATCH, $container),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_POST_DISPATCH, $container),
-                self::getHandlerExceptionParser($route)
+                self::getHandlerExceptionParser($route),
+                $parsers
             );
 
-            $instance = new Route($router, $config);
-
-            if (null !== $parserCollection) {
-                /**
-                 * @var RouteConfigParserInterface $routeParser
-                 */
-                foreach ($parserCollection as $routeParser) {
-                    $routeParser->parse($route, $instance, $container, self::$file);
-                }
-            }
-
-            $collection->append($instance);
+            $collection->append(new Route($router, $config));
         }
 
         return $collection;

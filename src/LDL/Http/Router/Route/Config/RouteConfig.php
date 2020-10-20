@@ -6,6 +6,7 @@ use LDL\Http\Core\Request\Helper\RequestHelper;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use Symfony\Component\String\UnicodeString;
 
@@ -61,6 +62,8 @@ class RouteConfig implements \JsonSerializable
      */
     private $exceptionHandlerCollection;
 
+    private $customParsers;
+
     public function __construct(
         string $method,
         string $version,
@@ -71,7 +74,8 @@ class RouteConfig implements \JsonSerializable
         string $responseParser = null,
         MiddlewareChainInterface $preDispatchMiddleware = null,
         MiddlewareChainInterface $postDispatchMiddleware = null,
-        ExceptionHandlerCollection $exceptionHandlerCollection = null
+        ExceptionHandlerCollection $exceptionHandlerCollection = null,
+        RouteConfigParserCollection $customParsers = null
     )
     {
         $this->setPrefix($prefix)
@@ -83,7 +87,19 @@ class RouteConfig implements \JsonSerializable
         ->setDispatcher($dispatcher)
         ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareChain())
         ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareChain())
-        ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection());
+        ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection())
+        ->setCustomParsers($customParsers);
+    }
+    
+    public function getCustomParsers() : ?RouteConfigParserCollection
+    {
+        return $this->customParsers;
+    }
+
+    private function setCustomParsers(?RouteConfigParserCollection $customParsers) : self
+    {
+        $this->customParsers = $customParsers;
+        return $this;
     }
 
     public static function fromArray(array $config) : self

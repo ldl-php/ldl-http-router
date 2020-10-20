@@ -2,21 +2,22 @@
 
 namespace LDL\Http\Router\Route\Config\Parser;
 
-use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use Psr\Container\ContainerInterface;
 
 interface RouteConfigParserInterface
 {
     /**
-     * @param array $data
-     * @param Route $route
+     * @param array $config
+     * @param RouteInterface $route
      * @param ContainerInterface|null $container
      * @param string|null $file
+     * @throws \Exception
      */
     public function parse(
-        array $data,
-        Route $route,
-        ContainerInterface $container = null,
-        string $file=null
-    ): void;
+        array $config,
+        RouteInterface $route,
+        ContainerInterface $container=null,
+        string $file = null
+    ) : void;
 }

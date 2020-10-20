@@ -3,6 +3,7 @@
 namespace LDL\Http\Router\Dispatcher;
 
 use LDL\Http\Router\Exception\UndispatchedRouterException;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
@@ -69,7 +70,17 @@ class RouterDispatcher {
         [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
 
         if($route) {
+            /**
+             * Set the current route in the router
+             */
             $this->router->setCurrentRoute($route);
+
+            /**
+             * Parse custom configuration directives before the route is about to be dispatched
+             */
+            if($route->getConfig()->getCustomParsers()){
+                $route->getConfig()->getCustomParsers()->parse($route);
+            }
         }
 
         $request = $this->router->getRequest();

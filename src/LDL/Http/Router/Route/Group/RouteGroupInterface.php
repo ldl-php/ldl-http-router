@@ -33,19 +33,4 @@ interface RouteGroupInterface
      */
     public function getRoutes() : RouteCollection;
 
-    /**
-     * Obtain group guards, the idea is that said guards will be executed
-     * before dispatching any route inside the route group, so instead of adding a guard for each
-     * route, you can add a global guard to a route group instead.
-     *
-     * Examples of said guard could be the following:
-     *
-     * Authenticated state
-     * Request content type JSON
-     * etc ...
-     *
-     * @return RouterGuardCollection|null
-     */
-    public function getGuards() : ?RouterGuardCollection;
-
 }

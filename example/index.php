@@ -108,13 +108,13 @@ class PostDispatch implements MiddlewareInterface
 class ConfigParser implements RouteConfigParserInterface
 {
     public function parse(
-        array $data,
-        Route $route,
+        array $config,
+        \LDL\Http\Router\Route\RouteInterface $route,
         ContainerInterface $container = null,
         string $file=null
     ): void
     {
-        if(!array_key_exists('customConfig', $data)){
+        if(!array_key_exists('customConfig', $config)){
             return;
         }
 
