@@ -9,6 +9,7 @@ use LDL\Framework\Base\Contracts\PriorityInterface;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, PriorityInterface
 {
@@ -16,14 +17,14 @@ interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, Pri
      * @param Route $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
-     * @param array $urlArguments
+     * @param ParameterBag $urlParameters
      * @return array|null
      */
     public function dispatch(
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArguments = []
+        ParameterBag $urlParameters=null
     ) : ?array;
 
 }

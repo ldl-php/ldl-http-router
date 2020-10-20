@@ -5,6 +5,7 @@ namespace LDL\Http\Router\Route;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface RouteInterface
 {
@@ -20,6 +21,6 @@ interface RouteInterface
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArgs = []
+        ParameterBag $urlParameters=null
     ) : array;
 }

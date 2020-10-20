@@ -4,11 +4,14 @@ namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Handler\Exception\ModifiesResponseInterface;
+use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Router;
+use LDL\Type\Collection\Exception\ItemSelectionException;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHandlerCollectionInterface
 {
@@ -30,7 +33,8 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
     public function handle(
         Router $router,
         \Exception $exception,
-        string $context
+        string $context,
+        ParameterBag $urlParameters=null
     ) : void
     {
         if(0 === count($this)){
@@ -39,7 +43,17 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
 
         $response = $router->getResponse();
 
-        $parser = $router->getResponseParserRepository()->getSelectedItem();
+
+        try {
+
+            $parser = $router->getResponseParserRepository()->getSelectedItem();
+
+        }catch(ItemSelectionException $e){
+
+            $parser = null;
+
+        }
+
         $contentModified = false;
 
         /**
@@ -51,11 +65,18 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
                 continue;
             }
 
-            $httpStatusCode = $exceptionHandler->handle($router, $exception, $context);
+            $httpStatusCode = $exceptionHandler->handle($router, $exception, $context, $urlParameters);
 
             if($exceptionHandler instanceof ModifiesResponseInterface){
                 $response->setContent(
-                    $parser ? $parser->parse($exceptionHandler->getContent(), $context, $router) : $exception->getMessage()
+                    $parser ? $parser->parse(
+                        $exceptionHandler->getContent(),
+                        $context,
+                        $router,
+                        $urlParameters
+                    )
+                    :
+                    $exception->getMessage()
                 );
 
                 $contentModified = true;

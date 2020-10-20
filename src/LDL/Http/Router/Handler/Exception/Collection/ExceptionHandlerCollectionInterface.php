@@ -6,6 +6,7 @@ use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface ExceptionHandlerCollectionInterface extends CollectionInterface, NamespaceableInterface, PrioritySortingInterface
 {
@@ -13,11 +14,13 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface, Names
      * @param Router $router
      * @param \Exception $exception
      * @param string $context
+     * @param ParameterBag $urlParameters
      * @throws \Exception
      */
     public function handle(
         Router $router,
         \Exception $exception,
-        string $context
+        string $context,
+        ParameterBag $urlParameters=null
     ) : void;
 }

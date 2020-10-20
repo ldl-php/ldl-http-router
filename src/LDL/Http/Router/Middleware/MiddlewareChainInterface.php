@@ -6,7 +6,6 @@
 
 namespace LDL\Http\Router\Middleware;
 
-use LDL\Framework\Base\Contracts\IsActiveInterface;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
@@ -15,6 +14,7 @@ use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
 use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, NamespaceableInterface, PrioritySortingInterface, FilterByActiveStateInterface
 {
@@ -48,13 +48,14 @@ interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChai
      * @param Route $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
-     * @param array $urlArgs
+     * @param ParameterBag $urlParameters
+     *
      * @return array
      */
     public function dispatch(
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArgs = []
+        ParameterBag $urlParameters=null
     ) : array;
 }

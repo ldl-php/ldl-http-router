@@ -84,14 +84,29 @@ class Router
 
         $this->responseParserRepository = $responseParserRepository;
 
-        if(null !== $responseParserRepository){
-            return;
+        $jsonParser = new JsonResponseParser();
+
+        /**
+         * If no response parser repo is passed, create a new instance
+         */
+        if(null === $responseParserRepository){
+            $responseParserRepository = new ResponseParserRepository();
         }
 
-        $jsonParser = new JsonResponseParser();
-        $this->responseParserRepository = new ResponseParserRepository();
-        $this->responseParserRepository->append($jsonParser);
-        $this->responseParserRepository->select($jsonParser->getItemKey());
+        /**
+         * We always need a response parser to reply to a request, so we add the JSON parser
+         * and select it, this can of course be changed by the response parser set in the route.
+         *
+         * But for all other requests which do not have a response parser configuration directive, the JSON parser
+         * will be used.
+         */
+        if(
+            null === $responseParserRepository->getSelectedKey() &&
+            false === $responseParserRepository->hasKey($jsonParser->getItemKey())
+        ){
+            $responseParserRepository->append($jsonParser);
+            $this->responseParserRepository->select($jsonParser->getItemKey());
+        }
     }
 
     /**

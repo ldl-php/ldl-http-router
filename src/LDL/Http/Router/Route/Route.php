@@ -6,6 +6,7 @@ use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Router;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class Route implements RouteInterface
 {
@@ -38,14 +39,14 @@ class Route implements RouteInterface
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
-     * @param array $urlArgs
+     * @param ParameterBag $urlParameters
      * @return array
      * @throws \Exception
      */
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArgs = []
+        ParameterBag $urlParameters=null
     ) : array
     {
         $config = $this->config;
@@ -62,7 +63,7 @@ class Route implements RouteInterface
                 $this,
                 $request,
                 $response,
-                $urlArgs
+                $urlParameters
             );
 
             if(count($preResult) > 0) {
@@ -71,7 +72,8 @@ class Route implements RouteInterface
 
             $mainResult = $config->getDispatcher()->dispatch(
                 $request,
-                $response
+                $response,
+                $urlParameters
             );
 
             if($mainResult) {
@@ -87,7 +89,7 @@ class Route implements RouteInterface
                 $this,
                 $request,
                 $response,
-                $urlArgs
+                $urlParameters
             );
 
             if($postResult){

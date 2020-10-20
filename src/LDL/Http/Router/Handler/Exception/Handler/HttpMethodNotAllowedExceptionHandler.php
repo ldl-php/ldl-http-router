@@ -9,6 +9,7 @@ use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Router;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class HttpMethodNotAllowedExceptionHandler implements ExceptionHandlerInterface
 {
@@ -29,7 +30,12 @@ class HttpMethodNotAllowedExceptionHandler implements ExceptionHandlerInterface
         $this->_tPriority = $priority ?? self::DEFAULT_PRIORITY;
     }
 
-    public function handle(Router $router, \Exception $e, string $context): ?int
+    public function handle(
+        Router $router,
+        \Exception $e,
+        string $context,
+        ParameterBag $urlParameters=null
+    ): ?int
     {
         return $e instanceof HttpMethodNotAllowedException ? ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED : null;
     }

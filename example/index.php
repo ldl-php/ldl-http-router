@@ -18,18 +18,19 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Middleware\MiddlewareInterface;
-
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Psr\Container\ContainerInterface;
 
 class Dispatcher implements RouteDispatcherInterface
 {
     public function dispatch(
         RequestInterface $request,
-        ResponseInterface $response
+        ResponseInterface $response,
+        ParameterBag $urlParams=null
     ) : ?array
     {
         return [
-            'name' => $request->get('name')
+            'name' => $urlParams->get('name')
         ];
     }
 }
@@ -60,7 +61,7 @@ class PreDispatch implements MiddlewareInterface
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArgs = []
+        ParameterBag $parameterBag=null
     ) : ?array
     {
         return ['pre dispatch result!'];
@@ -93,7 +94,7 @@ class PostDispatch implements MiddlewareInterface
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArguments = []
+        ParameterBag $parameterBag=null
     ) : ?array
     {
         return ['post dispatch result!'];
@@ -136,7 +137,8 @@ $response = new Response();
 $router = new Router(
     Request::createFromGlobals(),
     $response,
-    $exceptionHandlerCollection
+    $exceptionHandlerCollection,
+    new \LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository()
 );
 
 $routes = RouteFactory::fromJsonFile(

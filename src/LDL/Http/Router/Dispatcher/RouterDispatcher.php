@@ -11,6 +11,7 @@ use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\Exception\HttpRouteNotFoundException;
 use Phroute\Phroute\RouteDataInterface;
 use Phroute\Phroute\Route as PhRoute;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class RouterDispatcher {
 
@@ -65,38 +66,42 @@ class RouterDispatcher {
         $this->result = [];
 
         /**
+         * If the route is not found, an exception will be thrown
+         *
          * @var Route $route
          */
         [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
 
-        if($route) {
-            /**
-             * Set the current route in the router
-             */
-            $this->router->setCurrentRoute($route);
+        $urlParameters = new ParameterBag();
+        $urlParameters->add($vars);
 
-            /**
-             * Parse custom configuration directives before the route is about to be dispatched
-             */
-            if($route->getConfig()->getCustomParsers()){
-                $route->getConfig()->getCustomParsers()->parse($route);
-            }
-        }
-
-        $request = $this->router->getRequest();
-        $response = $this->router->getResponse();
+        /**
+         * Set the current route in the router
+         */
+        $this->router->setCurrentRoute($route);
 
         /**
          * If the route contains a response parser, use the response parser configured in the route
          */
         if($route->getConfig()->getResponseParser()){
-            $this->router->getResponseParserRepository()->select($route->getConfig()->getResponseParser());
+            $this->router
+                ->getResponseParserRepository()
+                ->select($route->getConfig()->getResponseParser());
+        }
+
+        /**
+         * Parse custom configuration directives before the route is about to be dispatched
+         */
+        if($route->getConfig()->getCustomParsers()){
+            $route->getConfig()->getCustomParsers()->parse($route);
         }
 
         $this->router->getResponseParserRepository()->lockSelection();
 
-        $parser = $this->router->getResponseParserRepository()->getSelectedItem();
+        $request = $this->router->getRequest();
+        $response = $this->router->getResponse();
 
+        $parser = $this->router->getResponseParserRepository()->getSelectedItem();
         $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
         $preDispatch = $this->router
@@ -106,7 +111,8 @@ class RouterDispatcher {
             ->dispatch(
                 $route,
                 $request,
-                $response
+                $response,
+                $urlParameters
             );
 
         if(count($preDispatch)){
@@ -117,7 +123,11 @@ class RouterDispatcher {
             /**
              * Dispatch route
              */
-            $this->result['route'] = $route->dispatch($this->router->getRequest(), $this->router->getResponse(), $vars);
+            $this->result['route'] = $route->dispatch(
+                $this->router->getRequest(),
+                $this->router->getResponse(),
+                $urlParameters
+            );
         }
 
         $postDispatch = $this->router
@@ -127,7 +137,8 @@ class RouterDispatcher {
             ->dispatch(
                 $route,
                 $this->router->getRequest(),
-                $this->router->getResponse()
+                $this->router->getResponse(),
+                $urlParameters
             );
 
         if(count($postDispatch)){
@@ -138,7 +149,8 @@ class RouterDispatcher {
             $parser->parse(
                 $this->result,
                 Router::CONTEXT_ROUTER_POST_DISPATCH,
-                $this->router
+                $this->router,
+                $urlParameters
             )
         );
     }

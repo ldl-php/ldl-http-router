@@ -4,6 +4,7 @@ namespace LDL\Http\Router\Response\Parser\Json;
 
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Response\Parser\AbstractResponseParser;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class JsonResponseParser extends AbstractResponseParser
 {
@@ -38,7 +39,12 @@ class JsonResponseParser extends AbstractResponseParser
         return $this->contentType;
     }
 
-    public function parse(array $data, string $context, Router $router): string
+    public function parse(
+        array $data,
+        string $context,
+        Router $router,
+        ParameterBag $urlParameters=null
+    ): string
     {
         return json_encode($data, \JSON_THROW_ON_ERROR);
     }

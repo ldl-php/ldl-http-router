@@ -13,6 +13,7 @@ use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
 {
@@ -93,7 +94,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         Route $route,
         RequestInterface $request,
         ResponseInterface $response,
-        array $urlArgs = []
+        ParameterBag $urlParameters=null
     ) : array
     {
         $this->isDispatched = true;
@@ -108,7 +109,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                 $route,
                 $request,
                 $response,
-                $urlArgs
+                $urlParameters
             );
 
             $this->lastExecuted = $dispatch;
