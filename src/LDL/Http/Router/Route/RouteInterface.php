@@ -22,5 +22,5 @@ interface RouteInterface
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters=null
-    ) : array;
+    ) : ?array;
 }

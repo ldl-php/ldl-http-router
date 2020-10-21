@@ -20,6 +20,12 @@ use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Middleware\MiddlewareInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Psr\Container\ContainerInterface;
+use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
+use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
+use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
+use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
+use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 
 class Dispatcher implements RouteDispatcherInterface
 {
@@ -32,6 +38,39 @@ class Dispatcher implements RouteDispatcherInterface
         return [
             'name' => $urlParams->get('name')
         ];
+    }
+}
+
+class Dispatcher2 implements RouteDispatcherInterface
+{
+    public function dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        ParameterBag $urlParameters = null
+    ): ?array
+    {
+        throw new \InvalidArgumentException('test');
+    }
+}
+
+class InvalidArgumentExceptionHandler implements ExceptionHandlerInterface
+{
+    use NamespaceInterfaceTrait;
+    use PriorityInterfaceTrait;
+    use IsActiveInterfaceTrait;
+
+    public function handle(
+        Router $router,
+        \Exception $e,
+        string $context,
+        ParameterBag $urlParameters = null
+    ): ?int
+    {
+        if(!$e instanceof InvalidArgumentException){
+            return null;
+        }
+
+        return ResponseInterface::HTTP_CODE_FORBIDDEN;
     }
 }
 
@@ -110,7 +149,7 @@ class ConfigParser implements RouteConfigParserInterface
 {
     public function parse(
         array $config,
-        \LDL\Http\Router\Route\RouteInterface $route,
+        RouteInterface $route,
         ContainerInterface $container = null,
         string $file=null
     ): void
@@ -138,7 +177,7 @@ $router = new Router(
     Request::createFromGlobals(),
     $response,
     $exceptionHandlerCollection,
-    new \LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository()
+    new ResponseParserRepository()
 );
 
 $routes = RouteFactory::fromJsonFile(

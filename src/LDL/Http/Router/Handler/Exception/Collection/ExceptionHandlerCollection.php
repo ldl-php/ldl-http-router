@@ -4,7 +4,7 @@ namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Handler\Exception\ModifiesResponseInterface;
-use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Exception\ItemSelectionException;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
@@ -32,29 +32,29 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
      */
     public function handle(
         Router $router,
-        \Exception $exception,
+        \Exception $e,
         string $context,
         ParameterBag $urlParameters=null
     ) : void
     {
         if(0 === count($this)){
-            throw $exception;
+            throw $e;
         }
 
         $response = $router->getResponse();
 
-
         try {
 
+            /**
+             * @var ResponseParserInterface $parser
+             */
             $parser = $router->getResponseParserRepository()->getSelectedItem();
 
-        }catch(ItemSelectionException $e){
+        }catch(ItemSelectionException $ex){
 
             $parser = null;
 
         }
-
-        $contentModified = false;
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler
@@ -65,42 +65,28 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
                 continue;
             }
 
-            $httpStatusCode = $exceptionHandler->handle($router, $exception, $context, $urlParameters);
+            $httpStatusCode = $exceptionHandler->handle($router, $e, $context, $urlParameters);
 
-            if($exceptionHandler instanceof ModifiesResponseInterface){
-                $response->setContent(
-                    $parser ? $parser->parse(
-                        $exceptionHandler->getContent(),
-                        $context,
-                        $router,
-                        $urlParameters
-                    )
-                    :
-                    $exception->getMessage()
-                );
-
-                $contentModified = true;
-            }
-
-            if(null === $httpStatusCode) {
+            if(null === $httpStatusCode){
                 continue;
             }
 
             $response->setStatusCode($httpStatusCode);
 
-            if(false === $contentModified){
-                $response->setContent(
-                    $parser ? $parser->parse(
-                        ['error' => $exception->getMessage()],
-                        $context,
-                        $router
-                    ) : $exception->getMessage()
-                );
-            }
+            $modifiesResponse = $exceptionHandler instanceof ModifiesResponseInterface;
+
+            $response->setContent(
+                $parser->parse(
+                    $modifiesResponse ? $exceptionHandler->getContent() : ['error' => $e->getMessage()],
+                    $context,
+                    $router,
+                    $urlParameters
+                )
+            );
 
             return;
         }
 
-        throw $exception;
+        throw $e;
     }
 }

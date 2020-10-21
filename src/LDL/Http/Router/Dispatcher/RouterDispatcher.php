@@ -3,7 +3,6 @@
 namespace LDL\Http\Router\Dispatcher;
 
 use LDL\Http\Router\Exception\UndispatchedRouterException;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
@@ -97,11 +96,11 @@ class RouterDispatcher {
         }
 
         $this->router->getResponseParserRepository()->lockSelection();
+        $parser = $this->router->getResponseParserRepository()->getSelectedItem();
 
         $request = $this->router->getRequest();
         $response = $this->router->getResponse();
 
-        $parser = $this->router->getResponseParserRepository()->getSelectedItem();
         $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
         $preDispatch = $this->router
@@ -119,15 +118,37 @@ class RouterDispatcher {
             $this->result['router']['pre'] = $preDispatch;
         }
 
+        $routeException = false;
+
         if($route) {
-            /**
-             * Dispatch route
-             */
-            $this->result['route'] = $route->dispatch(
-                $this->router->getRequest(),
-                $this->router->getResponse(),
-                $urlParameters
-            );
+            try {
+                /**
+                 * Dispatch route
+                 */
+                $this->result['route'] = $route->dispatch(
+                    $this->router->getRequest(),
+                    $this->router->getResponse(),
+                    $urlParameters
+                );
+            }catch(\Exception $e){
+                /**
+                 * Handle route specific exceptions.
+                 *
+                 * If the exception was not handled by the route exception handler,
+                 * the exception handler collection will rethrow the exception so the
+                 * router exception handler gets executed.
+                 */
+
+                $routeException = true;
+
+                $route->getConfig()
+                    ->getExceptionHandlerCollection()
+                    ->handle(
+                        $this->router,
+                        $e,
+                        Route::CONTEXT_ROUTE_EXCEPTION
+                    );
+            }
         }
 
         $postDispatch = $this->router
@@ -145,14 +166,16 @@ class RouterDispatcher {
             $this->result['router']['post'] = $postDispatch;
         }
 
-        $response->setContent(
-            $parser->parse(
-                $this->result,
-                Router::CONTEXT_ROUTER_POST_DISPATCH,
-                $this->router,
-                $urlParameters
-            )
-        );
+        if(false === $routeException) {
+            $response->setContent(
+                $parser->parse(
+                    $this->result,
+                    Router::CONTEXT_ROUTER_POST_DISPATCH,
+                    $this->router,
+                    $urlParameters
+                )
+            );
+        }
     }
 
     /**

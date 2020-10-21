@@ -236,18 +236,17 @@ class RouteFactory
 
     private static function getHandlerExceptionParser(array $route) : ?ExceptionHandlerCollection
     {
-        if(false === array_key_exists('handlers', $route)){
+        if(!isset($route['response']['exception']['handlers'])) {
             return null;
         }
-
-        if(false === array_key_exists('exceptions', $route['handlers'])){
-            $msg = '"exceptions" not found in handlers section';
-            throw new Exception\SchemaException(self::exceptionMessage([$msg]));
+        if(!is_array($route['response']['exception']['handlers'])){
+            $msg = 'response -> exception -> handlers must be an array';
+            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
         $collection = new ExceptionHandlerCollection();
 
-        foreach($route['handlers']['exceptions'] as $handler){
+        foreach($route['response']['exception']['handlers'] as $handler){
             $instance = ClassOrContainer::get($handler);
 
             try {

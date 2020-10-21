@@ -16,6 +16,29 @@
       "customConfig": {
         "test": "1"
       }
+    },
+    {
+      "version": "1.0",
+      "url": {
+        "prefix": "exception"
+      },
+      "request": {
+        "method": "get"
+      },
+      "name": "exception",
+      "description": "Exception test",
+      "dispatcher": {
+        "class": "Dispatcher2"
+      },
+      "response": {
+        "exception": {
+          "handlers": [
+            {
+              "class": "InvalidArgumentExceptionHandler"
+            }
+          ]
+        }
+      }
     }
   ]
 }
