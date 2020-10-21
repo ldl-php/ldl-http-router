@@ -8,20 +8,20 @@ use LDL\Framework\Base\Contracts\PriorityInterface;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, PriorityInterface
 {
     /**
-     * @param Route $route
+     * @param RouteInterface $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param ParameterBag $urlParameters
      * @return array|null
      */
     public function dispatch(
-        Route $route,
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters=null
