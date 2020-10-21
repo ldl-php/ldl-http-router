@@ -26,19 +26,19 @@ class RouterDispatcher {
     /**
      * RouterDispatcher constructor.
      *
-     * @param RouteDataInterface $data
      * @param Router $router
      */
-    public function __construct(
-        RouteDataInterface $data,
-        Router $router
-    )
+    public function __construct(Router $router)
+    {
+        $this->router = $router;
+    }
+
+    public function initializeRoutes(RouteDataInterface $data) : self
     {
         $this->staticRouteMap = $data->getStaticRoutes();
-
         $this->variableRouteData = $data->getVariableRoutes();
 
-        $this->router = $router;
+        return $this;
     }
 
     /**
@@ -48,7 +48,7 @@ class RouterDispatcher {
     public function getResult() : array
     {
         if(null === $this->result){
-            $msg = 'You can not obtain the result of an "undispatched" router';
+            $msg = 'You can not obtain the result of an "undispatched" router dispatcher';
             throw new UndispatchedRouterException($msg);
         }
 

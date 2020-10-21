@@ -97,7 +97,7 @@ class PreDispatch implements MiddlewareInterface
     }
 
     public function dispatch(
-        Route $route,
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $parameterBag=null
@@ -130,7 +130,7 @@ class PostDispatch implements MiddlewareInterface
     }
 
     public function dispatch(
-        Route $route,
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $parameterBag=null

@@ -28,6 +28,11 @@ class Route implements RouteInterface
         $this->config = $config;
     }
 
+    public function getRouter() : Router
+    {
+        return $this->router;
+    }
+
     /**
      * @return RouteConfig
      */

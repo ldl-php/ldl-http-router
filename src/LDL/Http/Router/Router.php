@@ -85,6 +85,8 @@ class Router
 
         $this->responseParserRepository = $responseParserRepository;
 
+        $this->dispatcher = new RouterDispatcher($this);
+
         $jsonParser = new JsonResponseParser();
 
         /**
@@ -181,10 +183,7 @@ class Router
         $result = null;
 
         try {
-            $this->dispatcher = new RouterDispatcher(
-                $this->collector->getData(),
-                $this
-            );
+            $this->dispatcher->initializeRoutes($this->collector->getData());
 
             $result = $this->dispatcher
                 ->dispatch(
