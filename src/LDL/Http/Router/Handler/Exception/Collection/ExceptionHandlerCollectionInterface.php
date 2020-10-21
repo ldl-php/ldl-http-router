@@ -15,6 +15,9 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface, Names
      * @param \Exception $exception
      * @param string $context
      * @param ParameterBag $urlParameters
+     *
+     * @return array|null
+     *
      * @throws \Exception
      */
     public function handle(
@@ -22,5 +25,5 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface, Names
         \Exception $exception,
         string $context,
         ParameterBag $urlParameters=null
-    ) : void;
+    ) : array;
 }

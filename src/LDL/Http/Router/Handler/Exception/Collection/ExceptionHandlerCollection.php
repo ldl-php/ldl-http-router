@@ -4,9 +4,7 @@ namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Handler\Exception\ModifiesResponseInterface;
-use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Router;
-use LDL\Type\Collection\Exception\ItemSelectionException;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
@@ -35,26 +33,13 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
         \Exception $e,
         string $context,
         ParameterBag $urlParameters=null
-    ) : void
+    ) : array
     {
         if(0 === count($this)){
             throw $e;
         }
 
         $response = $router->getResponse();
-
-        try {
-
-            /**
-             * @var ResponseParserInterface $parser
-             */
-            $parser = $router->getResponseParserRepository()->getSelectedItem();
-
-        }catch(ItemSelectionException $ex){
-
-            $parser = null;
-
-        }
 
         /**
          * @var ExceptionHandlerInterface $exceptionHandler
@@ -75,16 +60,7 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
 
             $modifiesResponse = $exceptionHandler instanceof ModifiesResponseInterface;
 
-            $response->setContent(
-                $parser->parse(
-                    $modifiesResponse ? $exceptionHandler->getContent() : ['error' => $e->getMessage()],
-                    $context,
-                    $router,
-                    $urlParameters
-                )
-            );
-
-            return;
+            return $modifiesResponse ? $exceptionHandler->getContent() : ['error' => $e->getMessage()];
         }
 
         throw $e;

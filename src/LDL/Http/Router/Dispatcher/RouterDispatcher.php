@@ -58,9 +58,12 @@ class RouterDispatcher {
     /**
      * @param string $httpMethod
      * @param string $uri
+     *
+     * @return array
+     *
      * @throws \Exception
      */
-    public function dispatch(string $httpMethod, string $uri)
+    public function dispatch(string $httpMethod, string $uri) : array
     {
         $this->result = [];
 
@@ -83,8 +86,7 @@ class RouterDispatcher {
          * If the route contains a response parser, use the response parser configured in the route
          */
         if($route->getConfig()->getResponseParser()){
-            $this->router
-                ->getResponseParserRepository()
+            $this->router->getResponseParserRepository()
                 ->select($route->getConfig()->getResponseParser());
         }
 
@@ -118,8 +120,6 @@ class RouterDispatcher {
             $this->result['router']['pre'] = $preDispatch;
         }
 
-        $routeException = false;
-
         if($route) {
             try {
                 /**
@@ -138,10 +138,7 @@ class RouterDispatcher {
                  * the exception handler collection will rethrow the exception so the
                  * router exception handler gets executed.
                  */
-
-                $routeException = true;
-
-                $route->getConfig()
+                $this->result['route'] = $route->getConfig()
                     ->getExceptionHandlerCollection()
                     ->handle(
                         $this->router,
@@ -166,16 +163,7 @@ class RouterDispatcher {
             $this->result['router']['post'] = $postDispatch;
         }
 
-        if(false === $routeException) {
-            $response->setContent(
-                $parser->parse(
-                    $this->result,
-                    Router::CONTEXT_ROUTER_POST_DISPATCH,
-                    $this->router,
-                    $urlParameters
-                )
-            );
-        }
+        return $this->result;
     }
 
     /**

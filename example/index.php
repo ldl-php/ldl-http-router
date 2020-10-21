@@ -36,7 +36,7 @@ class Dispatcher implements RouteDispatcherInterface
     ) : ?array
     {
         return [
-            'name' => $urlParams->get('name')
+            'name' => $urlParams->get('urlName')
         ];
     }
 }

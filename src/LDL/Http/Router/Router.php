@@ -10,6 +10,7 @@ use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
+use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
@@ -177,15 +178,18 @@ class Router
 
     public function dispatch() : ResponseInterface
     {
+        $result = null;
+
         try {
             $this->dispatcher = new RouterDispatcher(
                 $this->collector->getData(),
                 $this
             );
 
-            $this->dispatcher->dispatch(
-                $this->request->getMethod(),
-                parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
+            $result = $this->dispatcher
+                ->dispatch(
+                    $this->request->getMethod(),
+                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );
 
         }catch(\Exception $e){
@@ -193,13 +197,30 @@ class Router
              * Handle global router exceptions, the exception will only be rethrown if no exception handler
              * is found.
              */
-            $this->exceptionHandlerCollection
+            $result = $this->exceptionHandlerCollection
                 ->handle(
                     $this,
                     $e,
                     self::CONTEXT_ROUTER_EXCEPTION
                 );
         }
+
+        if(null === $result){
+            return $this->response;
+        }
+
+        /**
+         * @var ResponseParserInterface $parser
+         */
+        $parser = $this->responseParserRepository->getSelectedItem();
+
+        $this->response->setContent(
+            $parser->parse(
+                $result,
+                'router',
+                $this
+            )
+        );
 
         return $this->response;
     }
