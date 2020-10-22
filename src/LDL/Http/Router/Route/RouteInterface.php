@@ -5,6 +5,7 @@ namespace LDL\Http\Router\Route;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
+use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface RouteInterface
@@ -23,4 +24,9 @@ interface RouteInterface
         ResponseInterface $response,
         ParameterBag $urlParameters=null
     ) : ?array;
+
+    /**
+     * @return Router
+     */
+    public function getRouter() : Router;
 }
