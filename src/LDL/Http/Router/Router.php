@@ -83,8 +83,6 @@ class Router
         $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
         $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
 
-        $this->responseParserRepository = $responseParserRepository;
-
         $this->dispatcher = new RouterDispatcher($this);
 
         $jsonParser = new JsonResponseParser();
@@ -108,8 +106,10 @@ class Router
             false === $responseParserRepository->hasKey($jsonParser->getItemKey())
         ){
             $responseParserRepository->append($jsonParser);
-            $this->responseParserRepository->select($jsonParser->getItemKey());
+            $responseParserRepository->select($jsonParser->getItemKey());
         }
+
+        $this->responseParserRepository = $responseParserRepository;
     }
 
     /**
