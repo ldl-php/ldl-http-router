@@ -10,9 +10,9 @@ use LDL\Http\Router\Helper\ClassOrContainer;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Dispatcher\RouteDispatcherRepository;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
@@ -112,7 +112,7 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
-                self::getDispatcher($route, $container),
+                self::getDispatcher($route, $router->getRouteDispatcherRepository()),
                 self::getResponseParser($route, $router),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_PRE_DISPATCH, $container),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_POST_DISPATCH, $container),
@@ -165,25 +165,22 @@ class RouteFactory
         return $route['url']['prefix'];
     }
 
-    private static function getDispatcher(array $route, ContainerInterface $container = null): RouteDispatcherInterface
+    private static function getDispatcher(
+        array $route,
+        RouteDispatcherRepository $dispatcherRepository
+    ): RouteDispatcherInterface
     {
         if (!array_key_exists('dispatcher', $route)) {
             $msg = 'No dispatcher was specified';
             throw new Exception\DispatcherNotFoundException(self::exceptionMessage([$msg]));
         }
 
-        $object = ClassOrContainer::get($route['dispatcher'], $container);
-
-        if (!$object instanceof RouteDispatcherInterface) {
-            $msg = sprintf(
-                'Dispatcher must be an instance of "%s"',
-                RouteDispatcherInterface::class
-            );
-
+        if(!is_string($route['dispatcher'])){
+            $msg = 'Route dispatcher must be of type string';
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        return $object;
+        return $dispatcherRepository->offsetGet($route['dispatcher']);
     }
 
     private static function getMiddleware(

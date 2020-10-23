@@ -10,9 +10,7 @@
       },
       "name": "test",
       "description": "A test route",
-      "dispatcher": {
-        "class": "Dispatcher"
-      },
+      "dispatcher": "dispatcher",
       "customConfig": {
         "test": "1"
       }
@@ -27,9 +25,7 @@
       },
       "name": "exception",
       "description": "Exception test",
-      "dispatcher": {
-        "class": "Dispatcher2"
-      },
+      "dispatcher": "dispatcher2",
       "response": {
         "exception": {
           "handlers": [

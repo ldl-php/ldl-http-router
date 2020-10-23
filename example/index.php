@@ -10,13 +10,11 @@ use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Handler\Exception\Handler\HttpMethodNotAllowedExceptionHandler;
 use LDL\Http\Router\Handler\Exception\Handler\HttpRouteNotFoundExceptionHandler;
 use LDL\Http\Router\Handler\Exception\Handler\InvalidContentTypeExceptionHandler;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Middleware\MiddlewareInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Psr\Container\ContainerInterface;
@@ -26,8 +24,9 @@ use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
+use LDL\Http\Router\Route\Dispatcher\AbstractRouteDispatcher;
 
-class Dispatcher implements RouteDispatcherInterface
+class Dispatcher extends AbstractRouteDispatcher
 {
     public function dispatch(
         RequestInterface $request,
@@ -41,7 +40,7 @@ class Dispatcher implements RouteDispatcherInterface
     }
 }
 
-class Dispatcher2 implements RouteDispatcherInterface
+class Dispatcher2 extends AbstractRouteDispatcher
 {
     public function dispatch(
         RequestInterface $request,
@@ -179,6 +178,10 @@ $router = new Router(
     $exceptionHandlerCollection,
     new ResponseParserRepository()
 );
+
+$router->getRouteDispatcherRepository()
+    ->append(new Dispatcher('dispatcher'))
+    ->append(new Dispatcher2('dispatcher2'));
 
 $routes = RouteFactory::fromJsonFile(
     './routes.json',

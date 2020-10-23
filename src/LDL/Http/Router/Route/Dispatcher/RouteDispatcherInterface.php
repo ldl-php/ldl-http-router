@@ -8,6 +8,13 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface RouteDispatcherInterface
 {
+
+    /**
+     * Returns the dispatcher name, this name must be unique
+     * @return string
+     */
+    public function getName() : string;
+
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,

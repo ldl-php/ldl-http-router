@@ -11,6 +11,7 @@ use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
+use LDL\Http\Router\Route\Dispatcher\RouteDispatcherRepository;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
@@ -63,6 +64,11 @@ class Router
     private $responseParserRepository;
 
     /**
+     * @var RouteDispatcherRepository
+     */
+    private $routeDispatcherRepository;
+
+    /**
      * @var RouterDispatcher
      */
     private $dispatcher;
@@ -72,6 +78,7 @@ class Router
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
         ResponseParserRepository $responseParserRepository = null,
+        RouteDispatcherRepository $routeDispatcherRepository = null,
         MiddlewareChainInterface $preDispatchMiddlewareChain = null,
         MiddlewareChainInterface $postDispatchMiddlewareChain = null
     )
@@ -82,6 +89,7 @@ class Router
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
         $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
         $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
+        $this->routeDispatcherRepository = $routeDispatcherRepository ?? new RouteDispatcherRepository();
 
         $this->dispatcher = new RouterDispatcher($this);
 
@@ -110,6 +118,14 @@ class Router
         }
 
         $this->responseParserRepository = $responseParserRepository;
+    }
+
+    /**
+     * @return RouteDispatcherRepository
+     */
+    public function getRouteDispatcherRepository() : RouteDispatcherRepository
+    {
+        return $this->routeDispatcherRepository;
     }
 
     /**
