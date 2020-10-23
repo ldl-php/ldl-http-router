@@ -27,7 +27,8 @@ class RouteFactory
         string $file,
         Router $router,
         ContainerInterface $container = null,
-        RouteConfigParserCollection $parserCollection = null
+        RouteConfigParserCollection $parserCollection = null,
+        ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
         if (!file_exists($file)) {
             $msg = "Route config file: \"$file\" was not found";
@@ -43,14 +44,21 @@ class RouteFactory
 
         self::$baseDirectory = dirname($file);
 
-        return self::fromJson(file_get_contents($file), $router, $container, $parserCollection);
+        return self::fromJson(
+            file_get_contents($file),
+            $router,
+            $container,
+            $parserCollection,
+            $routeExceptionHandlers
+        );
     }
 
     public static function fromJson(
         string $json,
         Router $router,
         ContainerInterface $container = null,
-        RouteConfigParserCollection $parserCollection = null
+        RouteConfigParserCollection $parserCollection = null,
+        ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
         try {
             return self::fromArray(
@@ -62,7 +70,8 @@ class RouteFactory
                 ),
                 $router,
                 $container,
-                $parserCollection
+                $parserCollection,
+                $routeExceptionHandlers
             );
         } catch (\Exception $e) {
             throw new Exception\JsonParseException(self::exceptionMessage([$e->getMessage()]));
@@ -73,7 +82,8 @@ class RouteFactory
         array $data,
         Router $router,
         ContainerInterface $container = null,
-        RouteConfigParserCollection $parserCollection = null
+        RouteConfigParserCollection $parserCollection = null,
+        ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
         $collection = new RouteCollection();
 
@@ -116,7 +126,7 @@ class RouteFactory
                 self::getResponseParser($route, $router),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_PRE_DISPATCH, $container),
                 self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_POST_DISPATCH, $container),
-                self::getHandlerExceptionParser($route),
+                self::getHandlerExceptionParser($route, $routeExceptionHandlers),
                 $parsers
             );
 
@@ -231,28 +241,30 @@ class RouteFactory
         );
     }
 
-    private static function getHandlerExceptionParser(array $route) : ?ExceptionHandlerCollection
+    private static function getHandlerExceptionParser(
+        array $route,
+        ExceptionHandlerCollection $collection = null
+    ) : ?ExceptionHandlerCollection
     {
         if(!isset($route['response']['exception']['handlers'])) {
             return null;
         }
+
+        if(0 === $collection->count()){
+            return null;
+        }
+
         if(!is_array($route['response']['exception']['handlers'])){
             $msg = 'response -> exception -> handlers must be an array';
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        $collection = new ExceptionHandlerCollection();
+        $useHandlers = new ExceptionHandlerCollection();
 
         foreach($route['response']['exception']['handlers'] as $handler){
-            $instance = ClassOrContainer::get($handler);
-
-            try {
-                $collection->append($instance);
-            } catch (\Exception $e) {
-                throw new Exception\InvalidSectionException(self::exceptionMessage([$e->getMessage()]));
-            }
+            $useHandlers->append($collection->offsetGet($handler));
         }
 
-        return $collection;
+        return $useHandlers;
     }
 }

@@ -18,10 +18,7 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Middleware\MiddlewareInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Psr\Container\ContainerInterface;
-use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
-use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
-use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
-use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
+use LDL\Http\Router\Handler\Exception\AbstractExceptionHandler;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Route\Dispatcher\AbstractRouteDispatcher;
@@ -52,12 +49,8 @@ class Dispatcher2 extends AbstractRouteDispatcher
     }
 }
 
-class InvalidArgumentExceptionHandler implements ExceptionHandlerInterface
+class TestExceptionHandler extends AbstractExceptionHandler
 {
-    use NamespaceInterfaceTrait;
-    use PriorityInterfaceTrait;
-    use IsActiveInterfaceTrait;
-
     public function handle(
         Router $router,
         \Exception $e,
@@ -162,10 +155,11 @@ class ConfigParser implements RouteConfigParserInterface
     }
 }
 
-$exceptionHandlerCollection = new ExceptionHandlerCollection();
-$exceptionHandlerCollection->append(new HttpMethodNotAllowedExceptionHandler());
-$exceptionHandlerCollection->append(new HttpRouteNotFoundExceptionHandler());
-$exceptionHandlerCollection->append(new InvalidContentTypeExceptionHandler());
+$routerExceptionHandlers = new ExceptionHandlerCollection();
+
+$routerExceptionHandlers->append(new HttpMethodNotAllowedExceptionHandler('http.method.not.allowed'))
+->append(new HttpRouteNotFoundExceptionHandler('http.route.not.found'))
+->append(new InvalidContentTypeExceptionHandler('http.invalid.content'));
 
 $parserCollection = new RouteConfigParserCollection();
 $parserCollection->append(new ConfigParser());
@@ -175,7 +169,7 @@ $response = new Response();
 $router = new Router(
     Request::createFromGlobals(),
     $response,
-    $exceptionHandlerCollection,
+    $routerExceptionHandlers,
     new ResponseParserRepository()
 );
 
@@ -183,11 +177,16 @@ $router->getRouteDispatcherRepository()
     ->append(new Dispatcher('dispatcher'))
     ->append(new Dispatcher2('dispatcher2'));
 
+
+$routeExceptionHandlers = new ExceptionHandlerCollection();
+$routeExceptionHandlers->append(new TestExceptionHandler('test.exception.handler'));
+
 $routes = RouteFactory::fromJsonFile(
     './routes.json',
     $router,
     null,
-    $parserCollection
+    $parserCollection,
+    $routeExceptionHandlers
 );
 
 $group = new RouteGroup('Test Group', 'test', $routes);

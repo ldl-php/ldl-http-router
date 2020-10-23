@@ -2,14 +2,16 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
-use LDL\Framework\Base\Contracts\IsActiveInterface;
-use LDL\Framework\Base\Contracts\NamespaceInterface;
-use LDL\Framework\Base\Contracts\PriorityInterface;
 use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface ExceptionHandlerInterface extends NamespaceInterface, PriorityInterface, IsActiveInterface
+interface ExceptionHandlerInterface
 {
+    /**
+     * @return string
+     */
+    public function getName() : string;
+
     /**
      * @param Router $router
      * @param \Exception $e

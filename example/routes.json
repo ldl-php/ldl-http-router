@@ -29,9 +29,7 @@
       "response": {
         "exception": {
           "handlers": [
-            {
-              "class": "InvalidArgumentExceptionHandler"
-            }
+            "test.exception.handler"
           ]
         }
       }

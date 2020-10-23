@@ -4,11 +4,9 @@ namespace LDL\Http\Router\Handler\Exception\Collection;
 
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
-use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
-use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface ExceptionHandlerCollectionInterface extends CollectionInterface, NamespaceableInterface, PrioritySortingInterface
+interface ExceptionHandlerCollectionInterface extends CollectionInterface
 {
     /**
      * @param Router $router

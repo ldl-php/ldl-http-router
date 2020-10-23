@@ -2,26 +2,40 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
-use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
-use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
 use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
 
 abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
 {
-    use NamespaceInterfaceTrait;
     use PriorityInterfaceTrait;
-    use IsActiveInterfaceTrait;
 
-    public function __construct(
-        string $namespace,
-        string $name,
-        int $priority,
-        bool $isActive
-    )
+    public const DEFAULT_PRIORITY = 1;
+
+    /**
+     * @var string
+     */
+    private $name;
+
+    public function __construct(string $name, int $priority=self::DEFAULT_PRIORITY)
     {
-        $this->_tNamespace = $namespace;
-        $this->_tName = $name;
-        $this->_tActive = $isActive;
+        $this->name = $name;
         $this->_tPriority = $priority;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function copy(int $priority): ExceptionHandlerInterface
+    {
+        $self = clone($this);
+        $self->_tPriority = $priority;
+        return $self;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getName(): string
+    {
+        return $this->name;
     }
 }
