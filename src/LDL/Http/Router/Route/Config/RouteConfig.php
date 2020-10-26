@@ -4,10 +4,11 @@ namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollectionInterface;
 use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
@@ -38,9 +39,9 @@ class RouteConfig implements \JsonSerializable
     private $version;
 
     /**
-     * @var RouteDispatcherInterface
+     * @var MiddlewareChainInterface
      */
-    private $dispatcher;
+    private $dispatchers;
 
     /**
      * @var string
@@ -62,6 +63,9 @@ class RouteConfig implements \JsonSerializable
      */
     private $exceptionHandlerCollection;
 
+    /**
+     * @var RouteConfigParserCollection
+     */
     private $customParsers;
 
     public function __construct(
@@ -70,12 +74,12 @@ class RouteConfig implements \JsonSerializable
         string $prefix,
         string $name,
         string $description,
-        RouteDispatcherInterface $dispatcher,
+        MiddlewareChainInterface $dispatchers,
         string $responseParser = null,
         MiddlewareChainInterface $preDispatchMiddleware = null,
         MiddlewareChainInterface $postDispatchMiddleware = null,
-        ExceptionHandlerCollection $exceptionHandlerCollection = null,
-        RouteConfigParserCollection $customParsers = null
+        ExceptionHandlerCollectionInterface $exceptionHandlerCollection = null,
+        RouteConfigParserCollectionInterface $customParsers = null
     )
     {
         $this->setPrefix($prefix)
@@ -84,7 +88,7 @@ class RouteConfig implements \JsonSerializable
         ->setRequestMethod($method)
         ->setResponseParser($responseParser)
         ->setDescription($description)
-        ->setDispatcher($dispatcher)
+        ->setDispatchers($dispatchers)
         ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareChain())
         ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareChain())
         ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection())
@@ -96,7 +100,7 @@ class RouteConfig implements \JsonSerializable
         return $this->customParsers;
     }
 
-    private function setCustomParsers(?RouteConfigParserCollection $customParsers) : self
+    private function setCustomParsers(?RouteConfigParserCollectionInterface $customParsers) : self
     {
         $this->customParsers = $customParsers;
         return $this;
@@ -151,11 +155,11 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return RouteDispatcherInterface
+     * @return MiddlewareChainInterface
      */
-    public function getDispatcher() : RouteDispatcherInterface
+    public function getDispatchers() : MiddlewareChainInterface
     {
-        return $this->dispatcher;
+        return $this->dispatchers;
     }
 
     /**
@@ -254,9 +258,13 @@ class RouteConfig implements \JsonSerializable
         return $this;
     }
 
-    private function setDispatcher(RouteDispatcherInterface $dispatcher) : self
+    /**
+     * @param MiddlewareChainInterface $dispatchers
+     * @return RouteConfig
+     */
+    private function setDispatchers(MiddlewareChainInterface $dispatchers) : self
     {
-        $this->dispatcher = $dispatcher;
+        $this->dispatchers = $dispatchers;
         return $this;
     }
 

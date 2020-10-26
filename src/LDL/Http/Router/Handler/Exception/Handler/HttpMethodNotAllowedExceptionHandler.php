@@ -13,7 +13,6 @@ class HttpMethodNotAllowedExceptionHandler extends AbstractExceptionHandler
     public function handle(
         Router $router,
         \Exception $e,
-        string $context,
         ParameterBag $urlParameters=null
     ): ?int
     {

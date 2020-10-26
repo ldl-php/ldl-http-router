@@ -5,19 +5,17 @@ namespace LDL\Http\Router\Route\Config\Parser;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
-use Psr\Container\ContainerInterface;
 
-class RouteConfigParserCollection extends ObjectCollection
+class RouteConfigParserCollection extends ObjectCollection implements RouteConfigParserCollectionInterface
 {
     /**
      * @var array
      */
     private $config;
 
-    private $route;
-
-    private $container;
-
+    /**
+     * @var ?string
+     */
     private $file;
 
     public function __construct(
@@ -36,12 +34,10 @@ class RouteConfigParserCollection extends ObjectCollection
 
     public function init(
         array $config,
-        ContainerInterface $container=null,
         string $file = null
     ): RouteConfigParserCollection
     {
         $this->config = $config;
-        $this->container = $container;
         $this->file = $file;
 
         return $this;
@@ -56,7 +52,6 @@ class RouteConfigParserCollection extends ObjectCollection
             $configParser->parse(
                 $this->config,
                 $route,
-                $this->container,
                 $this->file
             );
         }

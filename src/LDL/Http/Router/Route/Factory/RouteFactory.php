@@ -1,22 +1,16 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Factory;
 
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Helper\ClassOrContainer;
-use LDL\Http\Router\Middleware\MiddlewareChain;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
 use LDL\Http\Router\Route\Config\RouteConfig;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherInterface;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherRepository;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Router;
-use Psr\Container\ContainerInterface;
 
 class RouteFactory
 {
@@ -26,7 +20,7 @@ class RouteFactory
     public static function fromJsonFile(
         string $file,
         Router $router,
-        ContainerInterface $container = null,
+        MiddlewareChainInterface $routeMiddlewareChain = null,
         RouteConfigParserCollection $parserCollection = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
@@ -47,7 +41,7 @@ class RouteFactory
         return self::fromJson(
             file_get_contents($file),
             $router,
-            $container,
+            $routeMiddlewareChain,
             $parserCollection,
             $routeExceptionHandlers
         );
@@ -56,7 +50,7 @@ class RouteFactory
     public static function fromJson(
         string $json,
         Router $router,
-        ContainerInterface $container = null,
+        MiddlewareChainInterface $routeMiddlewareChain = null,
         RouteConfigParserCollection $parserCollection = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
@@ -69,7 +63,7 @@ class RouteFactory
                     \JSON_THROW_ON_ERROR
                 ),
                 $router,
-                $container,
+                $routeMiddlewareChain,
                 $parserCollection,
                 $routeExceptionHandlers
             );
@@ -81,7 +75,7 @@ class RouteFactory
     public static function fromArray(
         array $data,
         Router $router,
-        ContainerInterface $container = null,
+        MiddlewareChainInterface $routeMiddlewareChain = null,
         RouteConfigParserCollection $parserCollection = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
@@ -105,7 +99,6 @@ class RouteFactory
 
                 $parsers->init(
                     $route,
-                    $container,
                     self::$file
                 );
             }
@@ -122,10 +115,17 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
-                self::getDispatcher($route, $router->getRouteDispatcherRepository()),
+                self::getDispatchers($route, $router->getDispatcherChain()),
                 self::getResponseParser($route, $router),
-                self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_PRE_DISPATCH, $container),
-                self::getMiddleware($route, MiddlewareChainInterface::CONTEXT_POST_DISPATCH, $container),
+                self::getMiddleware(
+                    $route,
+                    MiddlewareChainInterface::CONTEXT_PRE_DISPATCH,
+                    $routeMiddlewareChain
+                ),
+                self::getMiddleware($route,
+                    MiddlewareChainInterface::CONTEXT_POST_DISPATCH,
+                    $routeMiddlewareChain
+                ),
                 self::getHandlerExceptionParser($route, $routeExceptionHandlers),
                 $parsers
             );
@@ -175,57 +175,48 @@ class RouteFactory
         return $route['url']['prefix'];
     }
 
-    private static function getDispatcher(
+    private static function getDispatchers(
         array $route,
-        RouteDispatcherRepository $dispatcherRepository
-    ): RouteDispatcherInterface
+        MiddlewareChainInterface $dispatcherRepository
+    ): MiddlewareChainInterface
     {
         if (!array_key_exists('dispatcher', $route)) {
             $msg = 'No dispatcher was specified';
             throw new Exception\DispatcherNotFoundException(self::exceptionMessage([$msg]));
         }
 
-        if(!is_string($route['dispatcher'])){
-            $msg = 'Route dispatcher must be of type string';
-            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
-        }
+        /**
+         * @var MiddlewareChainInterface $result
+         */
+        $result = $dispatcherRepository->filterByKeys(
+            !is_array($route['dispatcher']) ? [$route['dispatcher']] : $route['dispatcher']
+        );
 
-        return $dispatcherRepository->offsetGet($route['dispatcher']);
+        return $result;
     }
 
     private static function getMiddleware(
         array $route,
         string $middlewareType,
-        ContainerInterface $container = null
-    ): ?MiddlewareChainInterface {
+        MiddlewareChainInterface $chain = null
+    ): ?MiddlewareChainInterface
+    {
         if (!array_key_exists($middlewareType, $route)) {
             return null;
         }
 
-        $middlewareList = $route[$middlewareType];
-
-        if (!is_array($middlewareList)) {
-            $msg = sprintf(
-                'Section "%s" must be of type array, "%s" given.',
-                $middlewareType,
-                gettype($middlewareList)
-            );
-
-            throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
+        if(null === $chain){
+            throw new \LogicException('No middleware chain was given');
         }
 
-        $collection = new MiddlewareChain();
+        /**
+         * @var MiddlewareChainInterface $result
+         */
+        $result = $chain->filterByKeys(
+            is_array($route[$middlewareType]) ? $route[$middlewareType] : [$route[$middlewareType]]
+        );
 
-        foreach ($middlewareList as $dispatcher) {
-            $instance = ClassOrContainer::get($dispatcher, $container);
-            try {
-                $collection->append($instance);
-            } catch (\Exception $e) {
-                throw new Exception\InvalidSectionException(self::exceptionMessage([$e->getMessage()]));
-            }
-        }
-
-        return $collection;
+        return $result;
     }
 
     private static function exceptionMessage(array $messages): string
@@ -235,7 +226,7 @@ class RouteFactory
         }
 
         return sprintf(
-            'In file: "%s",%s',
+            'In file: "%s", %s',
             self::$file,
             implode(', ', $messages)
         );
@@ -244,7 +235,7 @@ class RouteFactory
     private static function getHandlerExceptionParser(
         array $route,
         ExceptionHandlerCollection $collection = null
-    ) : ?ExceptionHandlerCollection
+    ) : ?ExceptionHandlerCollectionInterface
     {
         if(!isset($route['response']['exception']['handlers'])) {
             return null;
@@ -259,12 +250,11 @@ class RouteFactory
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        $useHandlers = new ExceptionHandlerCollection();
+        /**
+         * @var ExceptionHandlerCollectionInterface $result
+         */
+        $result = $collection->filterByKeys($route['response']['exception']['handlers']);
 
-        foreach($route['response']['exception']['handlers'] as $handler){
-            $useHandlers->append($collection->offsetGet($handler));
-        }
-
-        return $useHandlers;
+        return $result;
     }
 }

@@ -15,31 +15,53 @@ use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Middleware\MiddlewareInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
-use Psr\Container\ContainerInterface;
 use LDL\Http\Router\Handler\Exception\AbstractExceptionHandler;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
-use LDL\Http\Router\Route\Dispatcher\AbstractRouteDispatcher;
+use LDL\Http\Router\Middleware\AbstractMiddleware;
+use LDL\Http\Router\Middleware\MiddlewareChain;
 
-class Dispatcher extends AbstractRouteDispatcher
+class Dispatcher extends AbstractMiddleware
 {
+
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    public function getPriority(): int
+    {
+        return 1;
+    }
+
     public function dispatch(
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParams=null
     ) : ?array
     {
         return [
-            'name' => $urlParams->get('urlName')
+            'result' => $urlParams->get('urlName')
         ];
     }
 }
 
-class Dispatcher2 extends AbstractRouteDispatcher
+class Dispatcher2 extends AbstractMiddleware
 {
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    public function getPriority(): int
+    {
+        return 1;
+    }
+
     public function dispatch(
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters = null
@@ -49,12 +71,36 @@ class Dispatcher2 extends AbstractRouteDispatcher
     }
 }
 
+class Dispatcher3 extends AbstractMiddleware
+{
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    public function getPriority(): int
+    {
+        return 2;
+    }
+
+    public function dispatch(
+        RouteInterface $route,
+        RequestInterface $request,
+        ResponseInterface $response,
+        ParameterBag $urlParams=null
+    ) : ?array
+    {
+        return [
+            'result' => $urlParams->get('urlName')
+        ];
+    }
+}
+
 class TestExceptionHandler extends AbstractExceptionHandler
 {
     public function handle(
         Router $router,
         \Exception $e,
-        string $context,
         ParameterBag $urlParameters = null
     ): ?int
     {
@@ -66,18 +112,8 @@ class TestExceptionHandler extends AbstractExceptionHandler
     }
 }
 
-class PreDispatch implements MiddlewareInterface
+class PreDispatch extends AbstractMiddleware
 {
-    public function getNamespace(): string
-    {
-        return 'PreDispatchNamespace';
-    }
-
-    public function getName(): string
-    {
-        return 'PreDispatchName';
-    }
-
     public function isActive(): bool
     {
         return true;
@@ -99,21 +135,11 @@ class PreDispatch implements MiddlewareInterface
     }
 }
 
-class PostDispatch implements MiddlewareInterface
+class PostDispatch extends AbstractMiddleware
 {
     public function getPriority() : int
     {
         return 1;
-    }
-
-    public function getNamespace(): string
-    {
-        return 'PostDispatchNamespace';
-    }
-
-    public function getName(): string
-    {
-        return 'PostDispatchName';
     }
 
     public function isActive(): bool
@@ -142,7 +168,6 @@ class ConfigParser implements RouteConfigParserInterface
     public function parse(
         array $config,
         RouteInterface $route,
-        ContainerInterface $container = null,
         string $file=null
     ): void
     {
@@ -150,8 +175,8 @@ class ConfigParser implements RouteConfigParserInterface
             return;
         }
 
-        $route->getConfig()->getPreDispatchMiddleware()->append(new PreDispatch());
-        $route->getConfig()->getPostDispatchMiddleware()->append(new PostDispatch());
+        $route->getConfig()->getPreDispatchMiddleware()->append(new PreDispatch('predispatch'));
+        $route->getConfig()->getPostDispatchMiddleware()->append(new PostDispatch('postdispatch'));
     }
 }
 
@@ -172,21 +197,23 @@ $router = new Router(
     $routerExceptionHandlers,
     new ResponseParserRepository()
 );
-
-$router->getRouteDispatcherRepository()
+$router->getDispatcherChain()
     ->append(new Dispatcher('dispatcher'))
-    ->append(new Dispatcher2('dispatcher2'));
-
+    ->append(new Dispatcher2('dispatcher2'))
+    ->append(new Dispatcher3('dispatcher3'));
 
 $routeExceptionHandlers = new ExceptionHandlerCollection();
 $routeExceptionHandlers->append(new TestExceptionHandler('test.exception.handler'));
 
+$routeMiddlewareChain = new MiddlewareChain();
+$routeMiddlewareChain->append(new PreDispatch('predispatch'));
+
 $routes = RouteFactory::fromJsonFile(
     './routes.json',
     $router,
-    null,
+    $routeMiddlewareChain,
     $parserCollection,
-    $routeExceptionHandlers
+    $routeExceptionHandlers,
 );
 
 $group = new RouteGroup('Test Group', 'test', $routes);

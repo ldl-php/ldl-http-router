@@ -15,7 +15,6 @@ interface ExceptionHandlerInterface
     /**
      * @param Router $router
      * @param \Exception $e
-     * @param string $context
      * @param ParameterBag $urlParameters
      *
      * @return int|null
@@ -23,7 +22,6 @@ interface ExceptionHandlerInterface
     public function handle(
         Router $router,
         \Exception $e,
-        string $context,
         ParameterBag $urlParameters=null
     ) : ?int;
 }

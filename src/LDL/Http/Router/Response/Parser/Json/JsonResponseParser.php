@@ -41,9 +41,7 @@ class JsonResponseParser extends AbstractResponseParser
 
     public function parse(
         array $data,
-        string $context,
-        Router $router,
-        ParameterBag $urlParameters=null
+        Router $router
     ): string
     {
         return json_encode($data, \JSON_THROW_ON_ERROR);

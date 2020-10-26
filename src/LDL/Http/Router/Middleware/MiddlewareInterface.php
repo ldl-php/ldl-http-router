@@ -3,7 +3,6 @@
 namespace LDL\Http\Router\Middleware;
 
 use LDL\Framework\Base\Contracts\IsActiveInterface;
-use LDL\Framework\Base\Contracts\NamespaceInterface;
 use LDL\Framework\Base\Contracts\PriorityInterface;
 
 use LDL\Http\Core\Request\RequestInterface;
@@ -11,7 +10,7 @@ use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\RouteInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, PriorityInterface
+interface MiddlewareInterface extends  IsActiveInterface, PriorityInterface
 {
     /**
      * @param RouteInterface $route
@@ -26,5 +25,10 @@ interface MiddlewareInterface extends NamespaceInterface, IsActiveInterface, Pri
         ResponseInterface $response,
         ParameterBag $urlParameters=null
     ) : ?array;
+
+    /**
+     * @return string
+     */
+    public function getName() : string;
 
 }

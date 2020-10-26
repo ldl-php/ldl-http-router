@@ -11,7 +11,6 @@ use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
-use LDL\Http\Router\Route\Dispatcher\RouteDispatcherRepository;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
@@ -19,10 +18,6 @@ use Phroute\Phroute\RouteCollector;
 
 class Router
 {
-    public const CONTEXT_ROUTER_EXCEPTION = 'router_exception';
-    public const CONTEXT_ROUTER_PRE_DISPATCH = 'router_preDispatch';
-    public const CONTEXT_ROUTER_POST_DISPATCH = 'router_postDispatch';
-
     /**
      * @var RouteCollector
      */
@@ -64,9 +59,9 @@ class Router
     private $responseParserRepository;
 
     /**
-     * @var RouteDispatcherRepository
+     * @var MiddlewareChainInterface
      */
-    private $routeDispatcherRepository;
+    private $dispatcherChain;
 
     /**
      * @var RouterDispatcher
@@ -78,7 +73,7 @@ class Router
         ResponseInterface $response,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
         ResponseParserRepository $responseParserRepository = null,
-        RouteDispatcherRepository $routeDispatcherRepository = null,
+        MiddlewareChainInterface $routeDispatcherRepository = null,
         MiddlewareChainInterface $preDispatchMiddlewareChain = null,
         MiddlewareChainInterface $postDispatchMiddlewareChain = null
     )
@@ -88,8 +83,8 @@ class Router
         $this->response = $response;
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
         $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
+        $this->dispatcherChain = $routeDispatcherRepository ?? new MiddlewareChain();
         $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
-        $this->routeDispatcherRepository = $routeDispatcherRepository ?? new RouteDispatcherRepository();
 
         $this->dispatcher = new RouterDispatcher($this);
 
@@ -121,11 +116,11 @@ class Router
     }
 
     /**
-     * @return RouteDispatcherRepository
+     * @return MiddlewareChainInterface
      */
-    public function getRouteDispatcherRepository() : RouteDispatcherRepository
+    public function getDispatcherChain() : MiddlewareChainInterface
     {
-        return $this->routeDispatcherRepository;
+        return $this->dispatcherChain;
     }
 
     /**
@@ -194,52 +189,6 @@ class Router
         return $this->dispatcher;
     }
 
-    public function dispatch() : ResponseInterface
-    {
-        $result = null;
-
-        try {
-            $this->dispatcher->initializeRoutes($this->collector->getData());
-
-            $result = $this->dispatcher
-                ->dispatch(
-                    $this->request->getMethod(),
-                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
-            );
-
-        }catch(\Exception $e){
-            /**
-             * Handle global router exceptions, the exception will only be rethrown if no exception handler
-             * is found.
-             */
-            $result = $this->exceptionHandlerCollection
-                ->handle(
-                    $this,
-                    $e,
-                    self::CONTEXT_ROUTER_EXCEPTION
-                );
-        }
-
-        if(null === $result){
-            return $this->response;
-        }
-
-        /**
-         * @var ResponseParserInterface $parser
-         */
-        $parser = $this->responseParserRepository->getSelectedItem();
-
-        $this->response->setContent(
-            $parser->parse(
-                $result,
-                'router',
-                $this
-            )
-        );
-
-        return $this->response;
-    }
-
     /**
      * @return RequestInterface
      */
@@ -286,6 +235,62 @@ class Router
     public function getPostDispatchMiddleware() : MiddlewareChainInterface
     {
         return $this->postDispatch;
+    }
+
+    /**
+     * @return ResponseInterface
+     * @throws \Exception
+     */
+    public function dispatch() : ResponseInterface
+    {
+        $result = null;
+
+        try {
+            $this->dispatcher->initializeRoutes($this->collector->getData());
+
+            $result = $this->dispatcher
+                ->dispatch(
+                    $this->request->getMethod(),
+                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
+            );
+
+        }catch(\Exception $e){
+            /**
+             * Handle global router exceptions, the exception will only be rethrown if no exception handler
+             * is found.
+             *
+             * Needed for 404 exceptions or wrong method exceptions
+             */
+            $result = $this->exceptionHandlerCollection
+                ->handle(
+                    $this,
+                    $e,
+                    $this->dispatcher->getUrlParameters()
+                );
+        }
+
+        if(null === $result){
+            return $this->response;
+        }
+
+        /**
+         * @var ResponseParserInterface $parser
+         */
+        $parser = $this->responseParserRepository->getSelectedItem();
+
+        /**
+         * Set the content type header according to the response parser
+         */
+        $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+
+        $this->response->setContent(
+            $parser->parse(
+                $result,
+                $this
+            )
+        );
+
+        return $this->response;
     }
 
 }

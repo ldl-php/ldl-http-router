@@ -11,7 +11,6 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface
     /**
      * @param Router $router
      * @param \Exception $exception
-     * @param string $context
      * @param ParameterBag $urlParameters
      *
      * @return array|null
@@ -21,7 +20,6 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface
     public function handle(
         Router $router,
         \Exception $exception,
-        string $context,
         ParameterBag $urlParameters=null
     ) : array;
 }

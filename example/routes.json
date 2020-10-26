@@ -10,7 +10,17 @@
       },
       "name": "test",
       "description": "A test route",
-      "dispatcher": "dispatcher",
+      "dispatcher": [
+        "dispatcher",
+        "dispatcher2"
+      ],
+      "response": {
+        "exception": {
+          "handlers": [
+            "test.exception.handler"
+          ]
+        }
+      },
       "customConfig": {
         "test": "1"
       }
@@ -26,6 +36,7 @@
       "name": "exception",
       "description": "Exception test",
       "dispatcher": "dispatcher2",
+      "preDispatch": ["predispatch"],
       "response": {
         "exception": {
           "handlers": [

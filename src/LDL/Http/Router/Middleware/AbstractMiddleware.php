@@ -1,24 +1,24 @@
 <?php declare(strict_types=1);
 
-namespace LDL\Http\Router\Route\Dispatcher;
+namespace LDL\Http\Router\Middleware;
 
-abstract class AbstractRouteDispatcher implements RouteDispatcherInterface
+abstract class AbstractMiddleware implements MiddlewareInterface
 {
     /**
      * @var string
      */
     private $name;
 
-    public function __construct(string $name){
+    public function __construct(string $name)
+    {
         $this->name = $name;
     }
 
     /**
-     * @return string
+     * {@inheritdoc}
      */
     public function getName() : string
     {
         return $this->name;
     }
-
 }

@@ -9,14 +9,15 @@ namespace LDL\Http\Router\Middleware;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
-use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
+use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, NamespaceableInterface, PrioritySortingInterface, FilterByActiveStateInterface
+interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface
 {
     public const CONTEXT_PRE_DISPATCH = 'preDispatch';
     public const CONTEXT_POST_DISPATCH = 'postDispatch';
@@ -45,15 +46,17 @@ interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChai
     /**
      * Dispatches the middleware chain which composes this collection
      *
-     * @param Route $route
+     * @param RouteInterface $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param ParameterBag $urlParameters
      *
+     * @throws \Exception
+     *
      * @return array
      */
     public function dispatch(
-        Route $route,
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters=null

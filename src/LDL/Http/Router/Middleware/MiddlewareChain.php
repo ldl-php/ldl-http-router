@@ -5,19 +5,22 @@ namespace LDL\Http\Router\Middleware;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
 use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
+use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use LDL\Type\Collection\Validator\UniqueKeyValidator;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
 {
-
+    use KeyValidatorChainTrait;
     use NamespaceableTrait;
     use ValueValidatorChainTrait;
     use PrioritySortingTrait;
@@ -39,12 +42,21 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      */
     private $result = [];
 
+    /**
+     * @var \Exception|null
+     */
+    private $lastException;
+
     public function __construct(iterable $items = null)
     {
         parent::__construct($items);
 
         $this->getValidatorChain()
             ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class))
+            ->lock();
+
+        $this->getKeyValidatorChain()
+            ->append(new UniqueKeyValidator())
             ->lock();
     }
 
@@ -82,16 +94,27 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         return $this->lastExecuted;
     }
 
+    /**
+     * @param MiddlewareInterface $item
+     * @param null $key
+     * @return CollectionInterface
+     * @throws \Exception
+     */
     public function append($item, $key = null): CollectionInterface
     {
-        return parent::append($item, $key ?? \spl_object_hash($item));
+        return parent::append($item, strtolower($item->getName()));
+    }
+
+    public function getLastException() : ?\Exception
+    {
+        return $this->lastException;
     }
 
     /**
      * {@inheritdoc}
      */
     public function dispatch(
-        Route $route,
+        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters=null
@@ -104,25 +127,31 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
          * @var MiddlewareInterface $dispatch
          */
         foreach ($this as $dispatch) {
+            try {
+                $this->lastExecuted = $dispatch;
 
-            $result = $dispatch->dispatch(
-                $route,
-                $request,
-                $response,
-                $urlParameters
-            );
+                $result = $dispatch->dispatch(
+                    $route,
+                    $request,
+                    $response,
+                    $urlParameters
+                );
 
-            $this->lastExecuted = $dispatch;
+                if (null !== $result) {
+                    $this->result[$dispatch->getName()] = $result;
+                }
 
-            if(null !== $result){
-                $this->result[$dispatch->getNamespace()][$dispatch->getName()] = $result;
+                $httpStatusCode = $response->getStatusCode();
+
+                if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK) {
+                    break;
+                }
+            }catch(\Exception $e){
+                $this->lastException = $e;
+
+                throw $e;
             }
 
-            $httpStatusCode = $response->getStatusCode();
-
-            if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK){
-                break;
-            }
         }
 
         return $this->result;

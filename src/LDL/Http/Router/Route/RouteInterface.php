@@ -19,14 +19,26 @@ interface RouteInterface
      */
     public function getConfig() : RouteConfig;
 
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @param ParameterBag|null $urlParameters
+     * @throws \Exception
+     * @return array|null
+     *
+     */
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
         ParameterBag $urlParameters=null
     ) : ?array;
-
     /**
      * @return Router
      */
     public function getRouter() : Router;
+
+    /**
+     * @return bool
+     */
+    public function isDispatched() : bool;
 }

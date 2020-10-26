@@ -38,7 +38,6 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
     public function handle(
         Router $router,
         \Exception $e,
-        string $context,
         ParameterBag $urlParameters=null
     ) : array
     {
@@ -52,7 +51,7 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
          * @var ExceptionHandlerInterface $exceptionHandler
          */
         foreach($this as $exceptionHandler){
-            $httpStatusCode = $exceptionHandler->handle($router, $e, $context, $urlParameters);
+            $httpStatusCode = $exceptionHandler->handle($router, $e, $urlParameters);
 
             if(null === $httpStatusCode){
                 continue;

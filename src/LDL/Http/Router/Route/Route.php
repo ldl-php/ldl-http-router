@@ -10,8 +10,6 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 
 class Route implements RouteInterface
 {
-    public const CONTEXT_ROUTE_EXCEPTION = 'route_exception';
-
     /**
      * @var Router
      */
@@ -21,6 +19,11 @@ class Route implements RouteInterface
      * @var RouteConfig
      */
     private $config;
+
+    /**
+     * @var bool
+     */
+    private $isDispatched = false;
 
     public function __construct(Router $router, RouteConfig $config)
     {
@@ -41,11 +44,16 @@ class Route implements RouteInterface
         return clone($this->config);
     }
 
+    public function isDispatched(): bool
+    {
+        return $this->isDispatched;
+    }
+
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param ParameterBag $urlParameters
-     * @return array
+     * @return array|null
      * @throws \Exception
      */
     public function dispatch(
@@ -54,54 +62,21 @@ class Route implements RouteInterface
         ParameterBag $urlParameters=null
     ) : ?array
     {
+        $this->isDispatched = true;
         $config = $this->config;
-
-        $result = [];
-
         /**
          * If any condition requires to abort the flow execution of the route, feel free
          * to throw an exception in your middleware.
          * Don't forget to add an exception handler for said exception.
          */
-        $preResult = $config->getPreDispatchMiddleware()->dispatch(
+        $mainResult = $config->getDispatchers()->dispatch(
             $this,
             $request,
             $response,
             $urlParameters
         );
 
-        if(count($preResult) > 0) {
-            $result['pre'] = $preResult;
-        }
-
-        $mainResult = $config->getDispatcher()->dispatch(
-            $request,
-            $response,
-            $urlParameters
-        );
-
-        if($mainResult) {
-            $result['main'] = $mainResult;
-        }
-
-        /**
-         * If any condition requires to abort the flow execution of the route, feel free
-         * to throw an exception in your middleware.
-         * Don't forget to add an exception handler for said exception.
-         */
-        $postResult = $config->getPostDispatchMiddleware()->dispatch(
-            $this,
-            $request,
-            $response,
-            $urlParameters
-        );
-
-        if($postResult){
-            $result['post'] = $postResult;
-        }
-
-        return $result;
-
+        return $mainResult;
     }
 
 }
