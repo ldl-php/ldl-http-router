@@ -9,6 +9,12 @@ class ResponseCodeHelper
         string $fill
     ) : ?array
     {
+        if(ctype_digit($pattern)){
+            return [
+                $pattern => $fill
+            ];
+        }
+
         if('any' === $pattern){
             return self::parseResponseRange('100-599', $fill);
         }
