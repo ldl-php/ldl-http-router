@@ -3,11 +3,10 @@
 namespace LDL\Http\Router\Response\Parser\Repository;
 
 use LDL\Type\Collection\Interfaces\CollectionInterface;
-use LDL\Type\Collection\Interfaces\Namespaceable\NamespaceableInterface;
 use LDL\Type\Collection\Interfaces\Selection\SingleSelectionInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 
-interface ResponseParserRepositoryInterface extends CollectionInterface, NamespaceableInterface, SingleSelectionInterface, HasKeyValidatorChainInterface
+interface ResponseParserRepositoryInterface extends CollectionInterface, SingleSelectionInterface, HasKeyValidatorChainInterface
 {
 
 }

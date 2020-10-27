@@ -4,18 +4,11 @@ namespace LDL\Http\Router\Response\Parser\Json;
 
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Response\Parser\AbstractResponseParser;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
 class JsonResponseParser extends AbstractResponseParser
 {
-    public const NAMESPACE = 'ldl.response.parser';
-    public const NAME = 'json';
+    public const NAME = 'ldl.json.response.parser';
     public const RESPONSE_CONTENT_TYPE = 'application/json';
-
-    public function getNamespace(): string
-    {
-        return self::NAMESPACE;
-    }
 
     public function getName(): string
     {

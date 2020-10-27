@@ -2,12 +2,10 @@
 
 namespace LDL\Http\Router\Response\Parser;
 
-use LDL\Framework\Base\Contracts\NamespaceInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Types\Object\Interfaces\KeyResolverInterface;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface ResponseParserInterface extends NamespaceInterface, KeyResolverInterface
+interface ResponseParserInterface extends KeyResolverInterface
 {
     /**
      * @return string
@@ -15,9 +13,13 @@ interface ResponseParserInterface extends NamespaceInterface, KeyResolverInterfa
     public function getContentType() : string;
 
     /**
+     * @return string
+     */
+    public function getName() : string;
+
+    /**
      * @param array $data data to parsed by the corresponding parser
      * @param Router $router Router object
-     * @param ParameterBag|null $urlParameters
      *
      * @return string
      */

@@ -3,7 +3,6 @@
 namespace LDL\Http\Router\Response\Parser\Repository;
 
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
-use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
@@ -12,7 +11,6 @@ use LDL\Type\Collection\Validator\UniqueKeyValidator;
 
 class ResponseParserRepository extends ObjectCollection implements ResponseParserRepositoryInterface
 {
-    use NamespaceableTrait;
     use SingleSelectionTrait;
     use KeyValidatorChainTrait;
 

@@ -4,7 +4,6 @@ namespace LDL\Http\Router\Dispatcher;
 
 use LDL\Http\Router\Exception\UndispatchedRouterException;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Response\Parser\ResponseParserInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Router;

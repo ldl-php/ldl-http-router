@@ -6,6 +6,6 @@ abstract class AbstractResponseParser implements ResponseParserInterface
 {
     public function getItemKey(): string
     {
-        return strtolower(sprintf('%s.%s', $this->getNamespace(), $this->getName()));
+        return strtolower($this->getName());
     }
 }
