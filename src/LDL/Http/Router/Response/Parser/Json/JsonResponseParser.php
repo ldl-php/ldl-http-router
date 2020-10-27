@@ -7,7 +7,7 @@ use LDL\Http\Router\Response\Parser\AbstractResponseParser;
 
 class JsonResponseParser extends AbstractResponseParser
 {
-    public const NAME = 'ldl.json.response.parser';
+    public const NAME = 'ldl.response.parser.json';
     public const RESPONSE_CONTENT_TYPE = 'application/json';
 
     public function getName(): string
