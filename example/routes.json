@@ -1,6 +1,7 @@
 {
   "routes": [
     {
+      "name": "test",
       "version": "1.0",
       "url": {
         "prefix": "list/{urlName}"
@@ -8,12 +9,13 @@
       "request": {
         "method": "get"
       },
-      "name": "test",
       "description": "A test route",
-      "dispatcher": [
-        "dispatcher",
-        "dispatcher2"
-      ],
+      "middleware": {
+        "dispatchers": [
+          "dispatcher",
+          "dispatcher2"
+        ]
+      },
       "response": {
         "exception": {
           "handlers": [
@@ -35,8 +37,10 @@
       },
       "name": "exception",
       "description": "Exception test",
-      "dispatcher": "dispatcher2",
-      "preDispatch": ["predispatch"],
+      "middleware": {
+        "dispatchers": "dispatcher2",
+        "preDispatch": ["predispatch"]
+      },
       "response": {
         "exception": {
           "handlers": [

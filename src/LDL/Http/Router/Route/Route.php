@@ -2,11 +2,12 @@
 
 namespace LDL\Http\Router\Route;
 
-use LDL\Http\Core\Request\RequestInterface;
-use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
+use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
+use LDL\Http\Router\Middleware\MiddlewareChain;
+use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Router;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
 class Route implements RouteInterface
 {
@@ -21,14 +22,60 @@ class Route implements RouteInterface
     private $config;
 
     /**
-     * @var bool
+     * @var MiddlewareChainInterface
      */
-    private $isDispatched = false;
+    private $preDispatchers;
 
-    public function __construct(Router $router, RouteConfig $config)
+    /**
+     * @var MiddlewareChainInterface
+     */
+    private $dispatcherChain;
+
+    /**
+     * @var MiddlewareChainInterface
+     */
+    private $postDispatchers;
+
+    /**
+     * @var ExceptionHandlerCollectionInterface
+     */
+    private $exceptionHandlers;
+
+    public function __construct(
+        Router $router,
+        RouteConfig $config,
+        MiddlewareChainInterface $preDispatchers = null,
+        MiddlewareChainInterface $dispatcherChain = null,
+        MiddlewareChainInterface $postDispatchers = null,
+        ExceptionHandlerCollectionInterface $exceptionHandlerCollection = null
+    )
     {
         $this->router = $router;
         $this->config = $config;
+        $this->preDispatchers = $preDispatchers ?? new MiddlewareChain('pre');
+        $this->dispatcherChain = $dispatcherChain ?? new MiddlewareChain('main');
+        $this->postDispatchers = $postDispatchers ?? new MiddlewareChain('post');
+        $this->exceptionHandlers = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
+    }
+
+    public function getPreDispatchChain() : MiddlewareChainInterface
+    {
+        return $this->preDispatchers;
+    }
+
+    public function getDispatchChain() : MiddlewareChainInterface
+    {
+        return $this->dispatcherChain;
+    }
+
+    public function getPostDispatchChain() : MiddlewareChainInterface
+    {
+        return $this->postDispatchers;
+    }
+
+    public function getExceptionHandlers() : ExceptionHandlerCollectionInterface
+    {
+        return $this->exceptionHandlers;
     }
 
     public function getRouter() : Router
@@ -44,39 +91,12 @@ class Route implements RouteInterface
         return clone($this->config);
     }
 
-    public function isDispatched(): bool
+    public function lockMiddleware(): RouteInterface
     {
-        return $this->isDispatched;
-    }
-
-    /**
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @param ParameterBag $urlParameters
-     * @return array|null
-     * @throws \Exception
-     */
-    public function dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        ParameterBag $urlParameters=null
-    ) : ?array
-    {
-        $this->isDispatched = true;
-        $config = $this->config;
-        /**
-         * If any condition requires to abort the flow execution of the route, feel free
-         * to throw an exception in your middleware.
-         * Don't forget to add an exception handler for said exception.
-         */
-        $mainResult = $config->getDispatchers()->dispatch(
-            $this,
-            $request,
-            $response,
-            $urlParameters
-        );
-
-        return $mainResult;
+        $this->getPreDispatchChain()->lock();
+        $this->getDispatchChain()->lock();
+        $this->getPostDispatchChain()->lock();
+        return $this;
     }
 
 }

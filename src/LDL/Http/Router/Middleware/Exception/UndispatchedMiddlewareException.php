@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Middleware\Exception;
 
-abstract class MiddlewareChainException extends \Exception
+class UndispatchedMiddlewareException extends MiddlewareException
 {
 
 }

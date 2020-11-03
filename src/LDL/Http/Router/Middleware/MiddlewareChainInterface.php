@@ -17,10 +17,8 @@ use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface
+interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface, MiddlewareInterface
 {
-    public const CONTEXT_PRE_DISPATCH = 'preDispatch';
-    public const CONTEXT_POST_DISPATCH = 'postDispatch';
     /**
      * Obtains the last executed dispatcher in the middleware chain
      * will throw an exception if the chain was not yet dispatched
@@ -38,27 +36,9 @@ interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChai
     public function getResult() : array;
 
     /**
-     * Checks whether the chain has been dispatched or not
-     * @return bool
+     * Returns the last exception
+     * @return \Exception|null
      */
-    public function isDispatched() : bool;
+    public function getLastException() : ?\Exception;
 
-    /**
-     * Dispatches the middleware chain which composes this collection
-     *
-     * @param RouteInterface $route
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @param ParameterBag $urlParameters
-     *
-     * @throws \Exception
-     *
-     * @return array
-     */
-    public function dispatch(
-        RouteInterface $route,
-        RequestInterface $request,
-        ResponseInterface $response,
-        ParameterBag $urlParameters=null
-    ) : array;
 }

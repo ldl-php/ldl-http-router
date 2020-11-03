@@ -8,9 +8,15 @@ use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Response\Formatter\ResponseFormatter;
+use LDL\Http\Router\Response\Formatter\ResponseFormatterInterface;
+use LDL\Http\Router\Response\Formatter\ResponseFormatterRepository;
+use LDL\Http\Router\Response\Formatter\ResponseFormatterRepositoryInterface;
 use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepositoryInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
@@ -39,19 +45,9 @@ class Router
     private $exceptionHandlerCollection;
 
     /**
-     * @var MiddlewareChainInterface
-     */
-    private $preDispatch;
-
-    /**
      * @var Route
      */
     private $currentRoute;
-
-    /**
-     * @var MiddlewareChainInterface
-     */
-    private $postDispatch;
 
     /**
      * @var ResponseParserRepository
@@ -59,9 +55,24 @@ class Router
     private $responseParserRepository;
 
     /**
+     * @var ResponseFormatterRepository
+     */
+    private $responseFormatterRepository;
+
+    /**
      * @var MiddlewareChainInterface
      */
-    private $dispatcherChain;
+    private $preDispatchChain;
+
+    /**
+     * @var MiddlewareChainInterface
+     */
+    private $postDispatchChain;
+
+    /**
+     * @var RouteConfigParserRepositoryInterface
+     */
+    private $configParserRepository;
 
     /**
      * @var RouterDispatcher
@@ -71,20 +82,21 @@ class Router
     public function __construct(
         RequestInterface $request,
         ResponseInterface $response,
+        RouteConfigParserRepositoryInterface $configParserCollection = null,
         ExceptionHandlerCollection $exceptionHandlerCollection = null,
         ResponseParserRepository $responseParserRepository = null,
-        MiddlewareChainInterface $routeDispatcherRepository = null,
-        MiddlewareChainInterface $preDispatchMiddlewareChain = null,
-        MiddlewareChainInterface $postDispatchMiddlewareChain = null
+        ResponseFormatterRepositoryInterface $responseFormatterRepository = null,
+        MiddlewareChainInterface $preDispatcherRepository = null,
+        MiddlewareChainInterface $postDispatcherRepository = null
     )
     {
         $this->collector = new RouteCollector();
         $this->request = $request;
         $this->response = $response;
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
-        $this->preDispatch = $preDispatchMiddlewareChain ?? new MiddlewareChain();
-        $this->dispatcherChain = $routeDispatcherRepository ?? new MiddlewareChain();
-        $this->postDispatch = $postDispatchMiddlewareChain ?? new MiddlewareChain();
+        $this->preDispatchChain = $preDispatcherRepository ?? new MiddlewareChain('pre');
+        $this->postDispatchChain = $postDispatcherRepository ?? new MiddlewareChain('post');
+        $this->configParserRepository = $configParserCollection ?? new RouteConfigParserRepository();
 
         $this->dispatcher = new RouterDispatcher($this);
 
@@ -99,7 +111,7 @@ class Router
 
         /**
          * We always need a response parser to reply to a request, so we add the JSON parser
-         * and select it, this can of course be changed by the response parser set in the route.
+         * and select it, this can of course be changed by the response parser set in the route configuration.
          *
          * But for all other requests which do not have a response parser configuration directive, the JSON parser
          * will be used.
@@ -113,14 +125,55 @@ class Router
         }
 
         $this->responseParserRepository = $responseParserRepository;
+
+        $defaultResponseFormatter = new ResponseFormatter('ldl.response.formatter.default');
+
+        /**
+         * If no response formatter repo is passed, create a new instance
+         */
+        if(null === $responseFormatterRepository){
+            $responseFormatterRepository = new ResponseFormatterRepository();
+        }
+
+        /**
+         * We always need a response formatter to format a response, so we add the default response formatter
+         * and select it, this can of course be changed by the response formatter configuration directive
+         * in the each route's configuration.
+         *
+         * But for all other responses which do not have a response formatter configuration directive, the
+         * default response parser will be used.
+         */
+        if(
+            null === $responseFormatterRepository->getSelectedKey() &&
+            false === $responseFormatterRepository->hasKey($defaultResponseFormatter->getName())
+        ){
+            $responseFormatterRepository->append($defaultResponseFormatter);
+            $responseFormatterRepository->select($defaultResponseFormatter->getName());
+        }
+
+        $this->responseFormatterRepository = $responseFormatterRepository;
+
+    }
+
+    public function getConfigParserRepository() : RouteConfigParserRepositoryInterface
+    {
+        return $this->configParserRepository;
     }
 
     /**
      * @return MiddlewareChainInterface
      */
-    public function getDispatcherChain() : MiddlewareChainInterface
+    public function getPreDispatchChain() : MiddlewareChainInterface
     {
-        return $this->dispatcherChain;
+        return $this->preDispatchChain;
+    }
+
+    /**
+     * @return MiddlewareChainInterface
+     */
+    public function getPostDispatchChain() : MiddlewareChainInterface
+    {
+        return $this->postDispatchChain;
     }
 
     /**
@@ -221,20 +274,12 @@ class Router
         return $this->exceptionHandlerCollection;
     }
 
-    /**
-     * @return MiddlewareChainInterface
-     */
-    public function getPreDispatchMiddleware() : MiddlewareChainInterface
+    public function lockMiddleware() : Router
     {
-        return $this->preDispatch;
-    }
+        $this->preDispatchChain->lock();
+        $this->postDispatchChain->lock();
 
-    /**
-     * @return MiddlewareChainInterface
-     */
-    public function getPostDispatchMiddleware() : MiddlewareChainInterface
-    {
-        return $this->postDispatch;
+        return $this;
     }
 
     /**
@@ -243,35 +288,20 @@ class Router
      */
     public function dispatch() : ResponseInterface
     {
-        $result = null;
+        $this->dispatcher->initializeRoutes($this->collector->getData());
 
-        try {
-            $this->dispatcher->initializeRoutes($this->collector->getData());
-
-            $result = $this->dispatcher
-                ->dispatch(
-                    $this->request->getMethod(),
-                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
+        $this->dispatcher
+            ->dispatch(
+                $this->request->getMethod(),
+                parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
             );
 
-        }catch(\Exception $e){
-            /**
-             * Handle global router exceptions, the exception will only be rethrown if no exception handler
-             * is found.
-             *
-             * Needed for 404 exceptions or wrong method exceptions
-             */
-            $result = $this->exceptionHandlerCollection
-                ->handle(
-                    $this,
-                    $e,
-                    $this->dispatcher->getUrlParameters()
-                );
-        }
+        /**
+         * @var ResponseFormatterInterface $formatter
+         */
+        $formatter = $this->responseFormatterRepository->getSelectedItem();
 
-        if(null === $result){
-            return $this->response;
-        }
+        $result = $formatter->format($this, $this->dispatcher->getResult());
 
         /**
          * @var ResponseParserInterface $parser

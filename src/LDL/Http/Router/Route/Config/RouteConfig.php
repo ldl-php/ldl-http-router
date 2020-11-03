@@ -3,12 +3,6 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
-use LDL\Http\Router\Middleware\MiddlewareChain;
-use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollectionInterface;
 use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
@@ -39,34 +33,19 @@ class RouteConfig implements \JsonSerializable
     private $version;
 
     /**
-     * @var MiddlewareChainInterface
-     */
-    private $dispatchers;
-
-    /**
      * @var string
      */
     private $responseParser;
 
     /**
-     * @var MiddlewareChainInterface
+     * @var array
      */
-    private $preDispatch;
+    private $rawConfig;
 
     /**
-     * @var MiddlewareChainInterface
+     * @var string
      */
-    private $postDispatch;
-
-    /**
-     * @var ExceptionHandlerCollection
-     */
-    private $exceptionHandlerCollection;
-
-    /**
-     * @var RouteConfigParserCollection
-     */
-    private $customParsers;
+    private $file;
 
     public function __construct(
         string $method,
@@ -74,36 +53,19 @@ class RouteConfig implements \JsonSerializable
         string $prefix,
         string $name,
         string $description,
-        MiddlewareChainInterface $dispatchers,
         string $responseParser = null,
-        MiddlewareChainInterface $preDispatchMiddleware = null,
-        MiddlewareChainInterface $postDispatchMiddleware = null,
-        ExceptionHandlerCollectionInterface $exceptionHandlerCollection = null,
-        RouteConfigParserCollectionInterface $customParsers = null
+        array $rawConfig = [],
+        string $file = null
     )
     {
         $this->setPrefix($prefix)
-        ->setName($name)
-        ->setVersion($version)
-        ->setRequestMethod($method)
-        ->setResponseParser($responseParser)
-        ->setDescription($description)
-        ->setDispatchers($dispatchers)
-        ->setPreDispatchMiddleware($preDispatchMiddleware ?? new MiddlewareChain())
-        ->setPostDispatchMiddleware($postDispatchMiddleware ?? new MiddlewareChain())
-        ->setExceptionHandlerCollection($exceptionHandlerCollection ?? new ExceptionHandlerCollection())
-        ->setCustomParsers($customParsers);
-    }
-    
-    public function getCustomParsers() : ?RouteConfigParserCollection
-    {
-        return $this->customParsers;
-    }
-
-    private function setCustomParsers(?RouteConfigParserCollectionInterface $customParsers) : self
-    {
-        $this->customParsers = $customParsers;
-        return $this;
+            ->setName($name)
+            ->setVersion($version)
+            ->setRequestMethod($method)
+            ->setResponseParser($responseParser)
+            ->setDescription($description)
+            ->setRawConfig($rawConfig)
+            ->setFile($file);
     }
 
     public static function fromArray(array $config) : self
@@ -155,14 +117,6 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @return MiddlewareChainInterface
-     */
-    public function getDispatchers() : MiddlewareChainInterface
-    {
-        return $this->dispatchers;
-    }
-
-    /**
      * @return string
      */
     public function getRequestMethod() : string
@@ -178,31 +132,29 @@ class RouteConfig implements \JsonSerializable
         return $this->responseParser;
     }
 
-    /**
-     * @return MiddlewareChain
-     */
-    public function getPreDispatchMiddleware() : MiddlewareChainInterface
+    public function getFile() : string
     {
-        return $this->preDispatch;
+        return $this->file;
     }
 
-    /**
-     * @return MiddlewareChain
-     */
-    public function getPostDispatchMiddleware() : MiddlewareChainInterface
+    public function getRawConfig() : array
     {
-        return $this->postDispatch;
-    }
-
-    /**
-     * @return ExceptionHandlerCollection
-     */
-    public function getExceptionHandlerCollection(): ExceptionHandlerCollection
-    {
-        return $this->exceptionHandlerCollection;
+        return $this->rawConfig;
     }
 
     //<editor-fold desc="Private methods">
+
+    private function setFile(string $file) : self
+    {
+        $this->file = $file;
+        return $this;
+    }
+
+    private function setRawConfig(array $config) : self
+    {
+        $this->rawConfig = $config;
+        return $this;
+    }
 
     private function setName(string $name) : self
     {
@@ -259,16 +211,6 @@ class RouteConfig implements \JsonSerializable
     }
 
     /**
-     * @param MiddlewareChainInterface $dispatchers
-     * @return RouteConfig
-     */
-    private function setDispatchers(MiddlewareChainInterface $dispatchers) : self
-    {
-        $this->dispatchers = $dispatchers;
-        return $this;
-    }
-
-    /**
      * Must be called after setPrefix
      *
      * @param string $method
@@ -290,36 +232,6 @@ class RouteConfig implements \JsonSerializable
         );
 
         throw new Exception\InvalidHttpMethodException($msg);
-    }
-
-    /**
-     * @param MiddlewareChain $chain
-     * @return RouteConfig
-     */
-    private function setPreDispatchMiddleware(MiddlewareChain $chain) : self
-    {
-        $this->preDispatch = $chain;
-        return $this;
-    }
-
-    /**
-     * @param MiddlewareChain $chain
-     * @return RouteConfig
-     */
-    private function setPostDispatchMiddleware(MiddlewareChain $chain) : self
-    {
-        $this->postDispatch = $chain;
-        return $this;
-    }
-
-    /**
-     * @param ExceptionHandlerCollection $exceptionHandlerCollection
-     * @return RouteConfig
-     */
-    private function setExceptionHandlerCollection(ExceptionHandlerCollection $exceptionHandlerCollection): RouteConfig
-    {
-        $this->exceptionHandlerCollection = $exceptionHandlerCollection;
-        return $this;
     }
 
     //</editor-fold>

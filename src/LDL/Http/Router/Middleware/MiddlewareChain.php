@@ -2,9 +2,9 @@
 
 namespace LDL\Http\Router\Middleware;
 
+use LDL\Framework\Base\Exception\LockingException;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
@@ -28,6 +28,11 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     use FilterByActiveStateTrait;
 
     /**
+     * @var string
+     */
+    private $name;
+
+    /**
      * @var MiddlewareInterface
      */
     private $lastExecuted;
@@ -36,6 +41,11 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      * @var bool
      */
     private $isDispatched = false;
+
+    /**
+     * @var int|null
+     */
+    private $priority;
 
     /**
      * @var array
@@ -47,9 +57,16 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      */
     private $lastException;
 
-    public function __construct(iterable $items = null)
+    /**
+     * @var bool
+     */
+    private $isActive;
+
+    public function __construct(string $name, bool $isActive = true, iterable $items = null)
     {
         parent::__construct($items);
+        $this->name = $name;
+        $this->isActive = $isActive;
 
         $this->getValidatorChain()
             ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class))
@@ -60,25 +77,48 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
             ->lock();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getResult() : array
-    {
-        if(!$this->isDispatched){
-            $msg = 'You can not obtain the result of an "undispatched" middleware chain';
-            throw new Exception\UndispatchedMiddlewareChainException($msg);
-        }
-
-        return $this->result;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isDispatched() : bool
+    public function isDispatched(): bool
     {
         return $this->isDispatched;
+    }
+
+    public function getPriority(): ?int
+    {
+        return $this->priority;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setActive(bool $isActive) : MiddlewareInterface
+    {
+        if($this->isLocked()){
+            $msg = "Middleware collection '{$this->name}' is locked and can not be modified";
+            throw new LockingException($msg);
+        }
+
+        $this->isActive = $isActive;
+
+        return $this;
+    }
+
+    public function setPriority(int $priority) : MiddlewareInterface
+    {
+        if($this->isLocked()){
+            $msg = "Middleware collection '{$this->name}' is locked and can not be modified";
+            throw new LockingException($msg);
+        }
+
+        $this->priority = $priority;
+
+        return $this;
     }
 
     /**
@@ -88,7 +128,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     {
         if(false === $this->isDispatched){
             $msg = 'You can not the last executed dispatcher of an "undispatched" middleware chain';
-            throw new Exception\UndispatchedMiddlewareChainException($msg);
+            throw new Exception\UndispatchedMiddlewareException($msg);
         }
 
         return $this->lastExecuted;
@@ -102,7 +142,8 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      */
     public function append($item, $key = null): CollectionInterface
     {
-        return parent::append($item, strtolower($item->getName()));
+        $priority = $item->getPriority();
+        return parent::append($item, $priority ?? count($this) + 1);
     }
 
     public function getLastException() : ?\Exception
@@ -114,11 +155,11 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      * {@inheritdoc}
      */
     public function dispatch(
-        RouteInterface $route,
         RequestInterface $request,
         ResponseInterface $response,
+        RouteInterface $route = null,
         ParameterBag $urlParameters=null
-    ) : array
+    ) : void
     {
         $this->isDispatched = true;
         $this->result = [];
@@ -127,15 +168,21 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
          * @var MiddlewareInterface $dispatch
          */
         foreach ($this as $dispatch) {
+            if(false === $dispatch->isActive()){
+                continue;
+            }
+
             try {
                 $this->lastExecuted = $dispatch;
 
-                $result = $dispatch->dispatch(
-                    $route,
+                $dispatch->dispatch(
                     $request,
                     $response,
+                    $route,
                     $urlParameters
                 );
+
+                $result = $dispatch->getResult();
 
                 if (null !== $result) {
                     $this->result[$dispatch->getName()] = $result;
@@ -153,8 +200,18 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
             }
 
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getResult() : array
+    {
+        if(!$this->isDispatched){
+            $msg = 'You can not obtain the result of an "undispatched" middleware chain';
+            throw new Exception\UndispatchedMiddlewareException($msg);
+        }
 
         return $this->result;
     }
-
 }

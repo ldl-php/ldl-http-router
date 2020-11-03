@@ -7,14 +7,9 @@ use LDL\Http\Router\Route\RouteInterface;
 interface RouteConfigParserInterface
 {
     /**
-     * @param array $config
      * @param RouteInterface $route
-     * @param string|null $file
      * @throws \Exception
      */
-    public function parse(
-        array $config,
-        RouteInterface $route,
-        string $file = null
-    ) : void;
+    public function parse(RouteInterface $route) : void;
+
 }

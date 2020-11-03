@@ -5,8 +5,10 @@ namespace LDL\Http\Router\Route\Factory;
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
+use LDL\Http\Router\Middleware\DispatcherRepository;
+use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserCollection;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
@@ -20,10 +22,10 @@ class RouteFactory
     public static function fromJsonFile(
         string $file,
         Router $router,
-        MiddlewareChainInterface $routeMiddlewareChain = null,
-        RouteConfigParserCollection $parserCollection = null,
+        DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
-    ): RouteCollection {
+    ): RouteCollection
+    {
         if (!file_exists($file)) {
             $msg = "Route config file: \"$file\" was not found";
             throw new Exception\SchemaFileError($msg);
@@ -41,8 +43,7 @@ class RouteFactory
         return self::fromJson(
             file_get_contents($file),
             $router,
-            $routeMiddlewareChain,
-            $parserCollection,
+            $dispatcherRepository,
             $routeExceptionHandlers
         );
     }
@@ -50,8 +51,7 @@ class RouteFactory
     public static function fromJson(
         string $json,
         Router $router,
-        MiddlewareChainInterface $routeMiddlewareChain = null,
-        RouteConfigParserCollection $parserCollection = null,
+        DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
         try {
@@ -63,8 +63,7 @@ class RouteFactory
                     \JSON_THROW_ON_ERROR
                 ),
                 $router,
-                $routeMiddlewareChain,
-                $parserCollection,
+                $dispatcherRepository,
                 $routeExceptionHandlers
             );
         } catch (\Exception $e) {
@@ -75,13 +74,13 @@ class RouteFactory
     public static function fromArray(
         array $data,
         Router $router,
-        MiddlewareChainInterface $routeMiddlewareChain = null,
-        RouteConfigParserCollection $parserCollection = null,
+        DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
         $collection = new RouteCollection();
 
         foreach ($data['routes'] as $route) {
+
             if (!array_key_exists('request', $route)) {
                 $msg = '"request" section not found in route definition';
                 throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
@@ -90,17 +89,6 @@ class RouteFactory
             if (!array_key_exists('url', $route)) {
                 $msg = '"url" section not found in route definition';
                 throw new Exception\SectionNotFoundException(self::exceptionMessage([$msg]));
-            }
-
-            $parsers = null;
-
-            if($parserCollection){
-                $parsers = clone($parserCollection);
-
-                $parsers->init(
-                    $route,
-                    self::$file
-                );
             }
 
             /**
@@ -115,22 +103,31 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
-                self::getDispatchers($route, $router->getDispatcherChain()),
                 self::getResponseParser($route, $router),
-                self::getMiddleware(
-                    $route,
-                    MiddlewareChainInterface::CONTEXT_PRE_DISPATCH,
-                    $routeMiddlewareChain
-                ),
-                self::getMiddleware($route,
-                    MiddlewareChainInterface::CONTEXT_POST_DISPATCH,
-                    $routeMiddlewareChain
-                ),
-                self::getHandlerExceptionParser($route, $routeExceptionHandlers),
-                $parsers
+                $route,
+                self::$file
             );
 
-            $collection->append(new Route($router, $config));
+            $collection->append(new Route(
+                $router,
+                $config,
+                self::getMiddleware(
+                    $route,
+                    'preDispatch',
+                    $dispatcherRepository
+                ),
+                self::getMiddleware(
+                    $route,
+                    'dispatchers',
+                    $dispatcherRepository
+                ),
+                self::getMiddleware(
+                    $route,
+                    'postDispatch',
+                    $dispatcherRepository
+                ),
+                self::getHandlerExceptionParser($route, $routeExceptionHandlers),
+            ));
         }
 
         return $collection;
@@ -175,48 +172,41 @@ class RouteFactory
         return $route['url']['prefix'];
     }
 
-    private static function getDispatchers(
-        array $route,
-        MiddlewareChainInterface $dispatcherRepository
-    ): MiddlewareChainInterface
-    {
-        if (!array_key_exists('dispatcher', $route)) {
-            $msg = 'No dispatcher was specified';
-            throw new Exception\DispatcherNotFoundException(self::exceptionMessage([$msg]));
-        }
-
-        /**
-         * @var MiddlewareChainInterface $result
-         */
-        $result = $dispatcherRepository->filterByKeys(
-            !is_array($route['dispatcher']) ? [$route['dispatcher']] : $route['dispatcher']
-        );
-
-        return $result;
-    }
-
     private static function getMiddleware(
         array $route,
         string $middlewareType,
-        MiddlewareChainInterface $chain = null
+        DispatcherRepository $dispatcherRepository = null
     ): ?MiddlewareChainInterface
     {
-        if (!array_key_exists($middlewareType, $route)) {
+        if(!array_key_exists('middleware', $route)){
             return null;
         }
 
-        if(null === $chain){
+        if (!array_key_exists($middlewareType, $route['middleware'])) {
+            return null;
+        }
+
+        if(null === $dispatcherRepository){
             throw new \LogicException('No middleware chain was given');
         }
 
-        /**
-         * @var MiddlewareChainInterface $result
-         */
-        $result = $chain->filterByKeys(
-            is_array($route[$middlewareType]) ? $route[$middlewareType] : [$route[$middlewareType]]
-        );
+        $list = $route['middleware'][$middlewareType];
 
-        return $result;
+        if(!is_array($list)){
+            $list = [ $list ];
+        }
+
+        /**
+         * @var DispatcherRepository $dispatchers
+         */
+        $dispatchers = $dispatcherRepository->filterByKeys($list);
+        $chain = new MiddlewareChain($middlewareType);
+
+        foreach($dispatchers as $dispatcher){
+            $chain->append($dispatcher);
+        }
+
+        return $chain;
     }
 
     private static function exceptionMessage(array $messages): string
