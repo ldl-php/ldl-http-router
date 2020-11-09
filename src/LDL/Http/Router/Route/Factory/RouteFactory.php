@@ -199,7 +199,7 @@ class RouteFactory
         /**
          * @var DispatcherRepository $dispatchers
          */
-        $dispatchers = $dispatcherRepository->filterByKeys($list);
+        $dispatchers = $dispatcherRepository->filterByKeys(array_map('mb_strtolower', $list));
         $chain = new MiddlewareChain($middlewareType);
 
         foreach($dispatchers as $dispatcher){
