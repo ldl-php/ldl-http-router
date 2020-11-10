@@ -335,6 +335,16 @@ class Router
 
         }catch(CustomResponseException $e){
 
+            /**
+             * @var ResponseParserInterface $parser
+             */
+            $parser = $this->responseParserRepository->getSelectedItem();
+
+            /**
+             * Set the content type header according to the response parser
+             */
+            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+
             $this->response->setContent($e->getMessage());
 
         }

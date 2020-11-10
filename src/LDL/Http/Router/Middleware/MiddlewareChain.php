@@ -5,7 +5,7 @@ namespace LDL\Http\Router\Middleware;
 use LDL\Framework\Base\Exception\LockingException;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
@@ -157,7 +157,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParameters=null
     ) : void
     {
@@ -178,7 +178,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                 $dispatch->dispatch(
                     $request,
                     $response,
-                    $route,
+                    $router,
                     $urlParameters
                 );
 

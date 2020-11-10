@@ -195,7 +195,7 @@ class RouterDispatcher
             $chain->dispatch(
                 $this->router->getRequest(),
                 $this->router->getResponse(),
-                $route,
+                $this->router,
                 $this->urlParameters
             );
 

@@ -7,7 +7,7 @@ use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
 use LDL\Framework\Base\Traits\LockableObjectInterfaceTrait;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 abstract class AbstractMiddleware implements MiddlewareInterface
@@ -98,7 +98,7 @@ abstract class AbstractMiddleware implements MiddlewareInterface
     final public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParameters=null
     ) : void
     {
@@ -108,20 +108,20 @@ abstract class AbstractMiddleware implements MiddlewareInterface
 
         $this->result = [];
         $this->isDispatched = true;
-        $this->result = $this->_dispatch($request, $response, $route, $urlParameters);
+        $this->result = $this->_dispatch($request, $response, $router, $urlParameters);
     }
 
     /**
-     * @param RouteInterface $route
      * @param RequestInterface $request
      * @param ResponseInterface $response
+     * @param Router $router
      * @param ParameterBag|null $urlParameters
      * @return mixed
      */
     abstract protected function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParameters=null
     );
 }

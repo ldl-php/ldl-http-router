@@ -7,7 +7,7 @@ use LDL\Framework\Base\Contracts\IsActiveInterface;
 use LDL\Framework\Base\Contracts\LockableObjectInterface;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareInterface extends IsActiveInterface, LockableObjectInterface
@@ -16,14 +16,14 @@ interface MiddlewareInterface extends IsActiveInterface, LockableObjectInterface
      * @param RequestInterface $request
      * @param ResponseInterface $response
      * @param ParameterBag $urlParameters
-     * @param RouteInterface $route
+     * @param Router $router
      *
      * @return void
      */
     public function dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParameters=null
     ) : void;
 

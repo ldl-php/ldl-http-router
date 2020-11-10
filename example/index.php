@@ -27,7 +27,7 @@ class Dispatcher extends AbstractMiddleware
     public function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParams = null
     )
     {
@@ -42,7 +42,7 @@ class Dispatcher2 extends AbstractMiddleware
     public function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParameters = null
     )
     {
@@ -55,7 +55,7 @@ class Dispatcher3 extends AbstractMiddleware
     public function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $urlParams = null
     )
     {
@@ -86,7 +86,7 @@ class CustomDispatch1 extends AbstractMiddleware
     public function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $parameterBag=null
     )
     {
@@ -99,7 +99,7 @@ class CustomDispatch2 extends AbstractMiddleware
     public function _dispatch(
         RequestInterface $request,
         ResponseInterface $response,
-        RouteInterface $route = null,
+        Router $router,
         ParameterBag $parameterBag=null
     )
     {
