@@ -2,10 +2,6 @@
 
 namespace LDL\Http\Router\Middleware;
 
-use LDL\Framework\Base\Exception\LockingException;
-use LDL\Http\Core\Request\RequestInterface;
-use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
@@ -16,7 +12,6 @@ use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
 use LDL\Type\Collection\Validator\UniqueKeyValidator;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
 class DispatcherRepository extends ObjectCollection
 {

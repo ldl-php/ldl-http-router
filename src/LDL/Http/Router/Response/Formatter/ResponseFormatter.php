@@ -8,7 +8,7 @@ use LDL\Http\Router\Router;
 
 class ResponseFormatter extends AbstractResponseFormatter
 {
-    public function format(Router $router, MiddlewareChainCollection $collection)
+    public function _format(Router $router, MiddlewareChainCollection $collection) : ?array
     {
         $result = [];
 
@@ -38,7 +38,7 @@ class ResponseFormatter extends AbstractResponseFormatter
             foreach($item as $key => $value) {
                 if(array_key_exists($key, $return)){
                     $return[$key] = [
-                      $return[$key],
+                        $return[$key],
                       $value
                     ];
                     continue;

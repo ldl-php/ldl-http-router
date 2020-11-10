@@ -13,13 +13,24 @@ interface ResponseFormatterInterface
     public function getName() : string;
 
     /**
+     * Get the format result
+     * @return array|null
+     */
+    public function getResult() : ?array;
+
+    /**
+     * @return bool
+     */
+    public function isFormatted() : bool;
+
+    /**
      * Parse all the results returned by the RouterDispatcher
      * @param Router $router
      * @param MiddlewareChainCollection $collection
-     * @return mixed
+     * @return void
      */
     public function format(
         Router $router,
         MiddlewareChainCollection $collection
-    );
+    ) : void;
 }

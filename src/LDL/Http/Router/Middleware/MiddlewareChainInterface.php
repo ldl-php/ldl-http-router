@@ -6,16 +6,11 @@
 
 namespace LDL\Http\Router\Middleware;
 
-use LDL\Http\Core\Request\RequestInterface;
-use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Route;
-use LDL\Http\Router\Route\RouteInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface, MiddlewareInterface
 {

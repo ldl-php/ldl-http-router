@@ -2,10 +2,50 @@
 
 namespace LDL\Http\Router\Response\Parser;
 
+use LDL\Http\Router\Router;
+
 abstract class AbstractResponseParser implements ResponseParserInterface
 {
-    public function getItemKey(): string
+    /**
+     * @var string
+     */
+    private $name;
+
+    /**
+     * @var string|null
+     */
+    private $result;
+
+    /**
+     * @var bool
+     */
+    private $isParsed = false;
+
+    public function __construct(string $name)
     {
-        return strtolower($this->getName());
+        $this->name = $name;
     }
+
+    public function getName() : string
+    {
+        return $this->name;
+    }
+
+    public function isParsed() : bool
+    {
+        return $this->isParsed;
+    }
+
+    public function getResult(): ?string
+    {
+        return $this->result;
+    }
+
+    final public function parse(array $data, Router $router): void
+    {
+        $this->isParsed = true;
+        $this->result = $this->_parse($data, $router);
+    }
+
+    abstract protected function _parse(array $data, Router $router) : ?string;
 }

@@ -8,7 +8,6 @@ use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInter
 use LDL\Http\Router\Middleware\DispatcherRepository;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
