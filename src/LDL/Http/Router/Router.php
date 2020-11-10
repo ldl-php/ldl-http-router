@@ -118,10 +118,10 @@ class Router
          */
         if(
             null === $responseParserRepository->getSelectedKey() &&
-            false === $responseParserRepository->hasKey($jsonParser->getItemKey())
+            false === $responseParserRepository->hasKey($jsonParser->getName())
         ){
             $responseParserRepository->append($jsonParser);
-            $responseParserRepository->select($jsonParser->getItemKey());
+            $responseParserRepository->select($jsonParser->getName());
         }
 
         $this->responseParserRepository = $responseParserRepository;
@@ -297,28 +297,35 @@ class Router
             );
 
         /**
-         * @var ResponseFormatterInterface $formatter
-         */
-        $formatter = $this->responseFormatterRepository->getSelectedItem();
-
-        $result = $formatter->format($this, $this->dispatcher->getResult());
-
-        /**
          * @var ResponseParserInterface $parser
          */
         $parser = $this->responseParserRepository->getSelectedItem();
+
+        if(false === $parser->isParsed()) {
+
+            /**
+             * @var ResponseFormatterInterface $formatter
+             */
+            $formatter = $this->responseFormatterRepository->getSelectedItem();
+
+            if (false === $formatter->isFormatted()) {
+                $formatter->format($this, $this->dispatcher->getResult());
+            }
+
+            $result = $formatter->getResult();
+
+            $parser->parse(
+                $result,
+                $this
+            );
+        }
 
         /**
          * Set the content type header according to the response parser
          */
         $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
-        $this->response->setContent(
-            $parser->parse(
-                $result,
-                $this
-            )
-        );
+        $this->response->setContent($parser->getResult());
 
         return $this->response;
     }

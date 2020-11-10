@@ -10,11 +10,6 @@ class JsonResponseParser extends AbstractResponseParser
     public const NAME = 'ldl.response.parser.json';
     public const RESPONSE_CONTENT_TYPE = 'application/json';
 
-    public function getName(): string
-    {
-        return self::NAME;
-    }
-
     /**
      * @var string
      */
@@ -24,6 +19,7 @@ class JsonResponseParser extends AbstractResponseParser
         string $contentType=null
     )
     {
+        parent::__construct(self::NAME);
         $this->contentType = $contentType ??  self::RESPONSE_CONTENT_TYPE;
     }
 
@@ -32,10 +28,10 @@ class JsonResponseParser extends AbstractResponseParser
         return $this->contentType;
     }
 
-    public function parse(
+    public function _parse(
         array $data,
         Router $router
-    ): string
+    ) : ?string
     {
         return json_encode($data, \JSON_THROW_ON_ERROR);
     }

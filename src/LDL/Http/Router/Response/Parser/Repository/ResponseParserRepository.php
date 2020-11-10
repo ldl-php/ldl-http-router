@@ -3,6 +3,7 @@
 namespace LDL\Http\Router\Response\Parser\Repository;
 
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
+use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
@@ -24,5 +25,11 @@ class ResponseParserRepository extends ObjectCollection implements ResponseParse
 
         $this->getKeyValidatorChain()
             ->append(new UniqueKeyValidator());
+    }
+
+    public function append($item, $key = null) : CollectionInterface
+    {
+        parent::append($item, \mb_strtolower($item->getName()));
+        return $this;
     }
 }

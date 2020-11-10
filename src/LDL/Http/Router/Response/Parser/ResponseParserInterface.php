@@ -3,9 +3,8 @@
 namespace LDL\Http\Router\Response\Parser;
 
 use LDL\Http\Router\Router;
-use LDL\Type\Collection\Types\Object\Interfaces\KeyResolverInterface;
 
-interface ResponseParserInterface extends KeyResolverInterface
+interface ResponseParserInterface
 {
     /**
      * @return string
@@ -18,13 +17,23 @@ interface ResponseParserInterface extends KeyResolverInterface
     public function getName() : string;
 
     /**
+     * @return bool
+     */
+    public function isParsed() : bool;
+
+    /**
+     * @return string|null
+     */
+    public function getResult() : ?string;
+
+    /**
      * @param array $data data to parsed by the corresponding parser
      * @param Router $router Router object
      *
-     * @return string
+     * @return void
      */
     public function parse(
         array $data,
         Router $router
-    ) : string;
+    ) : void;
 }
