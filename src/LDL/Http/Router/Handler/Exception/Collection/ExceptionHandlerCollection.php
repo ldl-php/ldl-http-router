@@ -12,6 +12,11 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 
 class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHandlerCollectionInterface
 {
+    /**
+     * @var ExceptionHandlerInterface|null
+     */
+    private $lastExecutedExceptionHandler;
+
     public function __construct(iterable $items = null)
     {
         parent::__construct($items);
@@ -30,6 +35,11 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
     public function append($item, $key = null): Interfaces\CollectionInterface
     {
         return parent::append($item, $item->getName());
+    }
+
+    public function getLastExecutedExceptionHandler(): ?ExceptionHandlerInterface
+    {
+        return $this->lastExecutedExceptionHandler;
     }
 
     /**
@@ -51,6 +61,8 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
          * @var ExceptionHandlerInterface $exceptionHandler
          */
         foreach($this as $exceptionHandler){
+            $this->lastExecutedExceptionHandler = $exceptionHandler;
+
             $httpStatusCode = $exceptionHandler->handle($router, $e, $urlParameters);
 
             if(null === $httpStatusCode){

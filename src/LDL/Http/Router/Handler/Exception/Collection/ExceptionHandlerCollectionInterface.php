@@ -2,6 +2,7 @@
 
 namespace LDL\Http\Router\Handler\Exception\Collection;
 
+use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
@@ -22,4 +23,11 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface
         \Exception $exception,
         ParameterBag $urlParameters=null
     ) : array;
+
+    /**
+     * Return the last executed exception handler
+     *
+     * @return ExceptionHandlerInterface|null
+     */
+    public function getLastExecutedExceptionHandler() : ?ExceptionHandlerInterface;
 }

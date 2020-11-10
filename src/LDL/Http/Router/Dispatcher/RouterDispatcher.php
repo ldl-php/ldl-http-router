@@ -5,6 +5,7 @@ namespace LDL\Http\Router\Dispatcher;
 use LDL\Http\Router\Exception\UndispatchedRouterException;
 use LDL\Http\Router\Middleware\MiddlewareChainCollection;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Response\Exception\CustomResponseException;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Router;
@@ -81,6 +82,7 @@ class RouterDispatcher
      *
      * @return void
      *
+     * @throws CustomResponseException
      * @throws \Exception
      */
     public function dispatch(string $httpMethod, string $uri) : void
@@ -197,6 +199,8 @@ class RouterDispatcher
                 $this->urlParameters
             );
 
+        }catch(CustomResponseException $e){
+            throw $e;
         }catch(\Exception $e){
 
         }

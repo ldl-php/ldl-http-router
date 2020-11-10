@@ -8,6 +8,7 @@ use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Response\Exception\CustomResponseException;
 use LDL\Http\Router\Response\Formatter\ResponseFormatter;
 use LDL\Http\Router\Response\Formatter\ResponseFormatterInterface;
 use LDL\Http\Router\Response\Formatter\ResponseFormatterRepository;
@@ -295,42 +296,48 @@ class Router
     {
         $this->dispatcher->initializeRoutes($this->collector->getData());
 
-        $this->dispatcher
-            ->dispatch(
-                $this->request->getMethod(),
-                parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
-            );
-
-        /**
-         * @var ResponseParserInterface $parser
-         */
-        $parser = $this->responseParserRepository->getSelectedItem();
-
-        if(false === $parser->isParsed()) {
+        try {
+            $this->dispatcher
+                ->dispatch(
+                    $this->request->getMethod(),
+                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
+                );
 
             /**
-             * @var ResponseFormatterInterface $formatter
+             * @var ResponseParserInterface $parser
              */
-            $formatter = $this->responseFormatterRepository->getSelectedItem();
+            $parser = $this->responseParserRepository->getSelectedItem();
 
-            if (false === $formatter->isFormatted()) {
-                $formatter->format($this, $this->dispatcher->getResult());
+            if (false === $parser->isParsed()) {
+                /**
+                 * @var ResponseFormatterInterface $formatter
+                 */
+                $formatter = $this->responseFormatterRepository->getSelectedItem();
+
+                if (false === $formatter->isFormatted()) {
+                    $formatter->format($this, $this->dispatcher->getResult());
+                }
+
+                $result = $formatter->getResult();
+
+                $parser->parse(
+                    $result,
+                    $this
+                );
             }
 
-            $result = $formatter->getResult();
+            /**
+             * Set the content type header according to the response parser
+             */
+            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
 
-            $parser->parse(
-                $result,
-                $this
-            );
+            $this->response->setContent($parser->getResult());
+
+        }catch(CustomResponseException $e){
+
+            $this->response->setContent($e->getMessage());
+
         }
-
-        /**
-         * Set the content type header according to the response parser
-         */
-        $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
-
-        $this->response->setContent($parser->getResult());
 
         return $this->response;
     }
