@@ -237,6 +237,11 @@ class Router
         return $this->responseParserRepository;
     }
 
+    public function getResponseFormatterRepository() : ResponseFormatterRepository
+    {
+        return $this->responseFormatterRepository;
+    }
+
     public function getDispatcher() : RouterDispatcher
     {
         return $this->dispatcher;
