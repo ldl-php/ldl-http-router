@@ -29,10 +29,14 @@ class JsonResponseParser extends AbstractResponseParser
     }
 
     public function _parse(
-        array $data,
-        Router $router
+        Router $router,
+        ?array $data
     ) : ?string
     {
+        if(null === $data){
+            return null;
+        }
+
         return json_encode($data, \JSON_THROW_ON_ERROR);
     }
 }

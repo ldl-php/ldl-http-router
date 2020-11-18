@@ -89,6 +89,8 @@ class RouterDispatcher
     {
         $this->result = new MiddlewareChainCollection();
 
+        $route = null;
+
         try {
             /**
              * If the route is not found, an exception will be thrown
@@ -109,7 +111,7 @@ class RouterDispatcher
             /**
              * If the route contains a response parser, use the response parser configured in the route
              */
-            if($route->getConfig()->getResponseParser()){
+            if ($route->getConfig()->getResponseParser()) {
                 $this->router->getResponseParserRepository()
                     ->select($route->getConfig()->getResponseParser());
             }
@@ -132,9 +134,15 @@ class RouterDispatcher
              */
             $route->lockMiddleware();
 
-        }catch(\Exception $e) {
+        }catch(HttpRouteNotFoundException $e) {
 
-            $route = null;
+            $this->router->getPreDispatchChain()->append(new RouteNotFoundDispatcher());
+
+        }catch(HttpMethodNotAllowedException $e){
+
+            $this->router->getPreDispatchChain()->append(new RouteMethodMismatchDispatcher());
+
+        }catch(\Exception $e) {
 
         }
 

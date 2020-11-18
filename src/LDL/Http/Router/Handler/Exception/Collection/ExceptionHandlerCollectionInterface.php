@@ -5,9 +5,10 @@ namespace LDL\Http\Router\Handler\Exception\Collection;
 use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
+use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-interface ExceptionHandlerCollectionInterface extends CollectionInterface
+interface ExceptionHandlerCollectionInterface extends CollectionInterface, HasKeyValidatorChainInterface
 {
     /**
      * @param Router $router
@@ -22,7 +23,7 @@ interface ExceptionHandlerCollectionInterface extends CollectionInterface
         Router $router,
         \Exception $exception,
         ParameterBag $urlParameters=null
-    ) : array;
+    ) : ?array;
 
     /**
      * Return the last executed exception handler

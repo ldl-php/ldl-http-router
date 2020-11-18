@@ -27,13 +27,13 @@ interface ResponseParserInterface
     public function getResult() : ?string;
 
     /**
-     * @param array $data data to parsed by the corresponding parser
      * @param Router $router Router object
+     * @param array $data data to parsed by the corresponding parser
      *
      * @return void
      */
     public function parse(
-        array $data,
-        Router $router
+        Router $router,
+        ?array $data
     ) : void;
 }

@@ -39,7 +39,7 @@ class ResponseFormatter extends AbstractResponseFormatter
                 if(array_key_exists($key, $return)){
                     $return[$key] = [
                         $return[$key],
-                      $value
+                        $value
                     ];
                     continue;
                 }
@@ -47,7 +47,7 @@ class ResponseFormatter extends AbstractResponseFormatter
             }
         }
 
-        return $return;
+        return count($return) > 0 ? $return : null;
     }
 
     private function parseException(
@@ -63,11 +63,15 @@ class ResponseFormatter extends AbstractResponseFormatter
         $routerHandlers = $router->getExceptionHandlerCollection();
 
         if(null === $route){
-            $result[][$resultKey] = $routerHandlers->handle(
-                    $router,
-                    $e,
-                    $router->getDispatcher()->getUrlParameters(),
+            $exception = $routerHandlers->handle(
+                $router,
+                $e,
+                $router->getDispatcher()->getUrlParameters(),
             );
+
+            if(null !== $exception) {
+                $result[][$resultKey] = $exception;
+            }
 
             return;
         }
@@ -76,19 +80,27 @@ class ResponseFormatter extends AbstractResponseFormatter
 
             $handlers = $route->getExceptionHandlers();
 
-            $result[][$resultKey] = $handlers->handle(
+            $exception = $handlers->handle(
                 $router,
                 $e,
                 $router->getDispatcher()->getUrlParameters(),
             );
+
+            if(null !== $exception) {
+                $result[][$resultKey] = $exception;
+            }
 
         }catch (\Exception $e){
 
-            $result[][$resultKey] = $routerHandlers->handle(
+            $exception = $routerHandlers->handle(
                 $router,
                 $e,
                 $router->getDispatcher()->getUrlParameters(),
             );
+
+            if(null !== $exception){
+                $result[][$resultKey] = $exception;
+            }
 
         }
     }

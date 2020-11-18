@@ -6,12 +6,16 @@ use LDL\Http\Router\Handler\Exception\ExceptionHandlerInterface;
 use LDL\Http\Router\Handler\Exception\ModifiesResponseInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces;
+use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use LDL\Type\Collection\Validator\UniqueKeyValidator;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHandlerCollectionInterface
 {
+    use KeyValidatorChainTrait;
+
     /**
      * @var ExceptionHandlerInterface|null
      */
@@ -23,6 +27,10 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
 
         $this->getValidatorChain()
             ->append(new InterfaceComplianceItemValidator(ExceptionHandlerInterface::class))
+            ->lock();
+
+        $this->getKeyValidatorChain()
+            ->append(new UniqueKeyValidator())
             ->lock();
     }
 
@@ -49,7 +57,7 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
         Router $router,
         \Exception $e,
         ParameterBag $urlParameters=null
-    ) : array
+    ) : ?array
     {
         if(0 === count($this)){
             throw $e;

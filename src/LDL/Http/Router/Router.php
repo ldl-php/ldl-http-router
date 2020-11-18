@@ -321,8 +321,8 @@ class Router
                 $result = $formatter->getResult();
 
                 $parser->parse(
-                    $result,
-                    $this
+                    $this,
+                    $result
                 );
             }
 
