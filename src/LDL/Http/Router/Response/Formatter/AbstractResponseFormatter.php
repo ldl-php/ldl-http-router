@@ -43,16 +43,15 @@ abstract class AbstractResponseFormatter implements ResponseFormatterInterface
     }
 
     final public function format(
-        Router $router,
-        MiddlewareChainCollection $collection
+        MiddlewareChainCollection $collection,
+        bool $setFormatted=false
     ) : void
     {
-        $this->isFormatted = true;
-        $this->result = $this->_format($router, $collection);
+        $this->isFormatted = $setFormatted;
+        $this->result = $this->_format($collection);
     }
 
     abstract protected function _format(
-        Router $router,
         MiddlewareChainCollection $collection
     ) : ?array;
 }

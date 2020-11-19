@@ -11,10 +11,24 @@
       },
       "description": "A test route",
       "middleware": {
-        "dispatchers": [
-          "dispatcher",
-          "dispatcher2"
-        ]
+        "dispatchers": {
+          "name": "main dispatchers",
+          "list": [
+            {"groupA": [
+              {"groupB": [
+                {"groupC": ["dispatcher"]},
+                "dispatcher3"
+              ]}
+            ]},
+            "dispatcher2"
+          ]
+        },
+        "postDispatch": {
+          "name": "Post dispatchers",
+          "list": [
+            "post.dispatch"
+          ]
+        }
       },
       "response": {
         "exception": {

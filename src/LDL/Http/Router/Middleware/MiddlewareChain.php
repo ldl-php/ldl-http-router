@@ -50,7 +50,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     /**
      * @var array
      */
-    private $result = [];
+    private $result;
 
     /**
      * @var \Exception|null
@@ -62,7 +62,11 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
      */
     private $isActive;
 
-    public function __construct(string $name, bool $isActive = true, iterable $items = null)
+    public function __construct(
+        string $name = null,
+        bool $isActive = true,
+        iterable $items = null
+    )
     {
         parent::__construct($items);
         $this->name = $name;
@@ -87,7 +91,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         return $this->priority;
     }
 
-    public function getName(): string
+    public function getName(): ?string
     {
         return $this->name;
     }
@@ -161,8 +165,8 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         ParameterBag $urlParameters=null
     ) : void
     {
+        $this->result = null;
         $this->isDispatched = true;
-        $this->result = [];
 
         /**
          * @var MiddlewareInterface $dispatch
@@ -185,7 +189,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                 $result = $dispatch->getResult();
 
                 if (null !== $result) {
-                    $this->result[$dispatch->getName()] = $result;
+                    $this->appendToResult($result, $dispatch->getName());
                 }
 
                 $httpStatusCode = $response->getStatusCode();
@@ -194,18 +198,95 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                     break;
                 }
             }catch(\Exception $e){
+                $result = $dispatch->getResult();
+
+                if (null !== $result) {
+                    $this->appendToResult($result, $dispatch->getName());
+                }
+
+                $this->parseException($router, $e);
+
                 $this->lastException = $e;
 
-                throw $e;
+                //throw $e;
             }
 
         }
     }
 
+    private function appendToResult($data, string $name = null) : void
+    {
+        if(null === $this->result){
+            $this->result = [];
+        }
+
+        if(null === $name){
+            $this->result[] = $data;
+            return;
+        }
+
+        $this->result[$name] = $data;
+    }
+
+
+    private function parseException(
+        Router $router,
+        \Exception $e
+    ) : void
+    {
+        $lastExecutedDispatcher = $this->lastExecuted;
+        $resultKey = $lastExecutedDispatcher->getName();
+        $route = $router->getCurrentRoute();
+        $routerHandlers = $router->getExceptionHandlerCollection();
+
+        if(null === $route){
+            $exception = $routerHandlers->handle(
+                $router,
+                $e,
+                $router->getDispatcher()->getUrlParameters(),
+            );
+
+            if(null !== $exception) {
+                $this->appendToResult($exception, $resultKey);
+            }
+
+            return;
+        }
+
+        try{
+
+            $handlers = $route->getExceptionHandlers();
+
+            $exception = $handlers->handle(
+                $router,
+                $e,
+                $router->getDispatcher()->getUrlParameters(),
+            );
+
+            if(null !== $exception) {
+                $this->appendToResult($exception, $resultKey);
+            }
+
+        }catch (\Exception $e){
+
+            $exception = $routerHandlers->handle(
+                $router,
+                $e,
+                $router->getDispatcher()->getUrlParameters(),
+            );
+
+            if(null !== $exception){
+                $this->appendToResult($exception, $resultKey);
+            }
+
+        }
+
+    }
+
     /**
      * {@inheritdoc}
      */
-    public function getResult() : array
+    public function getResult() : ?array
     {
         if(!$this->isDispatched){
             $msg = 'You can not obtain the result of an "undispatched" middleware chain';

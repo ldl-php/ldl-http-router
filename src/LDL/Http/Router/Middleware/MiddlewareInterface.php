@@ -30,7 +30,7 @@ interface MiddlewareInterface extends IsActiveInterface, LockableObjectInterface
     /**
      * @return string
      */
-    public function getName() : string;
+    public function getName() : ?string;
 
     /**
      * @return array

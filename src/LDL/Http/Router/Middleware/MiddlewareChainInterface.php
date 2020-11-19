@@ -28,7 +28,7 @@ interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChai
      * @throws Exception\UndispatchedMiddlewareChainException
      * @return array
      */
-    public function getResult() : array;
+    public function getResult() : ?array;
 
     /**
      * Returns the last exception

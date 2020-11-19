@@ -32,8 +32,27 @@ class Dispatcher extends AbstractMiddleware
     )
     {
         return [
-            'result' => $urlParams->get('urlName')
+            'asdasd' => $urlParams->get('urlName')
         ];
+    }
+}
+
+class PostDispatch extends AbstractMiddleware
+{
+    public function _dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        Router $router,
+        ParameterBag $urlParams = null
+    )
+    {
+        /**
+         * @var \LDL\Http\Router\Response\Formatter\ResponseFormatterInterface $formatter
+         */
+        $formatter = $router->getResponseFormatterRepository()->getSelectedItem();
+
+        $formatter->format($router->getDispatcher()->getResult(), false);
+        return ['duplicate result' => $formatter->getResult()];
     }
 }
 
@@ -122,21 +141,6 @@ class ConfigParser implements RouteConfigParserInterface
             return;
         }
 
-        $test = new \LDL\Http\Router\Middleware\MiddlewareChain('myGroup');
-        $test->setPriority(2);
-
-        $test->append(new CustomDispatch1('one'))
-            ->append(new CustomDispatch2('two'));
-
-        $test2 = new \LDL\Http\Router\Middleware\MiddlewareChain('myGroup_2');
-        $test2->setPriority(1);
-
-        $test2->append(new CustomDispatch1('three'))
-            ->append(new CustomDispatch2('four'));
-
-        $route->getPreDispatchChain()->append($test);
-        $route->getPreDispatchChain()->append($test2);
-        $route->getPostDispatchChain()->append(new CustomDispatch2('custom_2'));
     }
 }
 
@@ -151,19 +155,53 @@ $configParserRepository->append(new ConfigParser());
 
 $response = new Response();
 
+class RouterPreDispatch extends AbstractMiddleware
+{
+    public function _dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        Router $router, ParameterBag $urlParameters = null
+    )
+    {
+        return ['pre global'];
+    }
+}
+
+class RouterPostDispatch extends AbstractMiddleware
+{
+    public function _dispatch(
+        RequestInterface $request,
+        ResponseInterface $response,
+        Router $router, ParameterBag $urlParameters = null
+    )
+    {
+        return ['post global'];
+    }
+}
+
+$chainPre = new \LDL\Http\Router\Middleware\MiddlewareChain('globalPre');
+$chainPre->append(new RouterPreDispatch('RouterPre'));
+
+$chainPost = new \LDL\Http\Router\Middleware\MiddlewareChain('globalPost');
+$chainPost->append(new RouterPostDispatch('RouterPost'));
+
 $router = new Router(
     Request::createFromGlobals(),
     $response,
     $configParserRepository,
     $routerExceptionHandlers,
-    new ResponseParserRepository()
+    new ResponseParserRepository(),
+    null,
+    $chainPre,
+    $chainPost
 );
 
 $dispatcherRepository = new DispatcherRepository();
 
 $dispatcherRepository->append(new Dispatcher('dispatcher'))
     ->append(new Dispatcher2('dispatcher2'))
-    ->append(new Dispatcher3('dispatcher3'));
+    ->append(new Dispatcher3('dispatcher3'))
+    ->append(new PostDispatch('post.dispatch'));
 
 $routeExceptionHandlers = new ExceptionHandlerCollection();
 $routeExceptionHandlers->append(new TestExceptionHandler('test.exception.handler'));

@@ -106,7 +106,6 @@ abstract class AbstractMiddleware implements MiddlewareInterface
             return;
         }
 
-        $this->result = [];
         $this->isDispatched = true;
         $this->result = $this->_dispatch($request, $response, $router, $urlParameters);
     }

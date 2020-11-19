@@ -52,9 +52,9 @@ class Route implements RouteInterface
     {
         $this->router = $router;
         $this->config = $config;
-        $this->preDispatchers = $preDispatchers ?? new MiddlewareChain('pre');
-        $this->dispatcherChain = $dispatcherChain ?? new MiddlewareChain('main');
-        $this->postDispatchers = $postDispatchers ?? new MiddlewareChain('post');
+        $this->preDispatchers = $preDispatchers ?? new MiddlewareChain();
+        $this->dispatcherChain = $dispatcherChain ?? new MiddlewareChain();
+        $this->postDispatchers = $postDispatchers ?? new MiddlewareChain();
         $this->exceptionHandlers = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
     }
 

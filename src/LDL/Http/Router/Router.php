@@ -95,8 +95,8 @@ class Router
         $this->request = $request;
         $this->response = $response;
         $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
-        $this->preDispatchChain = $preDispatcherRepository ?? new MiddlewareChain('pre');
-        $this->postDispatchChain = $postDispatcherRepository ?? new MiddlewareChain('post');
+        $this->preDispatchChain = $preDispatcherRepository ?? new MiddlewareChain();
+        $this->postDispatchChain = $postDispatcherRepository ?? new MiddlewareChain();
         $this->configParserRepository = $configParserCollection ?? new RouteConfigParserRepository();
 
         $this->dispatcher = new RouterDispatcher($this);
@@ -315,7 +315,7 @@ class Router
                 $formatter = $this->responseFormatterRepository->getSelectedItem();
 
                 if (false === $formatter->isFormatted()) {
-                    $formatter->format($this, $this->dispatcher->getResult());
+                    $formatter->format($this->dispatcher->getResult());
                 }
 
                 $result = $formatter->getResult();

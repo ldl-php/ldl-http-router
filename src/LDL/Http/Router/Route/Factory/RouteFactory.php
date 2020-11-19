@@ -192,20 +192,44 @@ class RouteFactory
         $list = $route['middleware'][$middlewareType];
 
         if(!is_array($list)){
-            $list = [ $list ];
+            $list = [ 'list' => [$list ]];
         }
 
-        /**
-         * @var DispatcherRepository $dispatchers
-         */
-        $dispatchers = $dispatcherRepository->filterByKeys(array_map('mb_strtolower', $list));
-        $chain = new MiddlewareChain($middlewareType);
+        $chain = new MiddlewareChain(array_key_exists('name', $list) ? $list['name'] : null);
 
-        foreach($dispatchers as $dispatcher){
-            $chain->append($dispatcher);
+        if(!array_key_exists('list', $list)){
+            return $chain;
         }
+
+        self::parseDispatchers($list['list'], $chain, $dispatcherRepository);
 
         return $chain;
+    }
+
+    private static function parseDispatchers(
+        array $list,
+        MiddlewareChainInterface $chain,
+        DispatcherRepository $dispatcherRepository
+    ) : void
+    {
+        foreach ($list as $key => $values) {
+            $isGroup = is_array($values);
+
+            if($isGroup){
+
+                if(is_int($key)){
+                    self::parseDispatchers($values, $chain, $dispatcherRepository);
+                    continue;
+                }
+
+                $group = new MiddlewareChain($key);
+                self::parseDispatchers($values, $group, $dispatcherRepository);
+                $chain->append($group);
+                continue;
+            }
+
+            $chain->append($dispatcherRepository->offsetGet($values));
+        }
     }
 
     private static function exceptionMessage(array $messages): string

@@ -25,12 +25,14 @@ interface ResponseFormatterInterface
 
     /**
      * Parse all the results returned by the RouterDispatcher
-     * @param Router $router
+     *
      * @param MiddlewareChainCollection $collection
+     * @param bool $setFormatted
+     *
      * @return void
      */
     public function format(
-        Router $router,
-        MiddlewareChainCollection $collection
+        MiddlewareChainCollection $collection,
+        bool $setFormatted = false
     ) : void;
 }
