@@ -103,6 +103,9 @@ class RouteFactory
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
                 self::getResponseParser($route, $router),
+                self::getResponseParserOptions($route),
+                self::getResponseFormatter($route),
+                self::getResponseFormatterOptions($route),
                 $route,
                 self::$file
             );
@@ -142,18 +145,102 @@ class RouteFactory
             return null;
         }
 
-        $parserName = $route['response']['parser'];
+        if(false === array_key_exists('name', $route['response']['parser'])){
+            return null;
+        }
+
+        $parserName = $route['response']['parser']['name'];
 
         if(!is_string($parserName)){
             $msg = sprintf(
-                '"parser" item in response section is expected to be a string, "%s" was given',
+                '"name" item in response "parser" section is expected to be a string, "%s" was given',
                 gettype($parserName)
             );
 
             throw new Exception\SchemaException($msg);
         }
 
-        return $route['response']['parser'];
+        return $route['response']['parser']['name'];
+    }
+
+    private static function getResponseParserOptions(array $route) : ?array
+    {
+        if(false === array_key_exists('response', $route)){
+            return null;
+        }
+
+        if(false === array_key_exists('parser', $route['response'])){
+            return null;
+        }
+
+        if(false === array_key_exists('options', $route['response']['parser'])){
+            return null;
+        }
+
+        if(!is_array($route['response']['parser']['options'])){
+            $msg = sprintf(
+                '"options" item in response "parser" section is expected to be an array, "%s" was given',
+                gettype($route['response']['parser']['options'])
+            );
+
+            throw new Exception\SchemaException($msg);
+        }
+
+        return $route['response']['parser']['options'];
+    }
+
+    private static function getResponseFormatter(array $route) : ?string
+    {
+        if(false === array_key_exists('response', $route)){
+            return null;
+        }
+
+        if(false === array_key_exists('formatter', $route['response'])){
+            return null;
+        }
+
+        if(false === array_key_exists('name', $route['response']['formatter'])){
+            return null;
+        }
+
+        $formatterName = $route['response']['formatter']['name'];
+
+        if(!is_string($formatterName)){
+            $msg = sprintf(
+                '"name" item in response "formatter" section is expected to be a string, "%s" was given',
+                gettype($formatterName)
+            );
+
+            throw new Exception\SchemaException($msg);
+        }
+
+        return $route['response']['formatter']['name'];
+    }
+
+    private static function getResponseFormatterOptions(array $route) : ?array
+    {
+        if(false === array_key_exists('response', $route)){
+            return null;
+        }
+
+        if(false === array_key_exists('formatter', $route['response'])){
+            return null;
+        }
+
+        if(false === array_key_exists('options', $route['response']['formatter'])){
+            return null;
+        }
+
+        if(!is_array($route['response']['formatter']['options'])){
+            $msg = sprintf(
+                '"options" item in "formatter" response section is expected to be an array, "%s" was given',
+                gettype($route['response']['parser']['options'])
+            );
+
+            throw new Exception\SchemaException($msg);
+        }
+
+        return $route['response']['formatter']['options'];
     }
 
     private static function getUrlPrefix(array $route): string

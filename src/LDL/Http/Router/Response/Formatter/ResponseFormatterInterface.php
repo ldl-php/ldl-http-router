@@ -3,7 +3,6 @@
 namespace LDL\Http\Router\Response\Formatter;
 
 use LDL\Http\Router\Middleware\MiddlewareChainCollection;
-use LDL\Http\Router\Router;
 
 interface ResponseFormatterInterface
 {
@@ -17,6 +16,17 @@ interface ResponseFormatterInterface
      * @return array|null
      */
     public function getResult() : ?array;
+
+    /**
+     * @param array|null $options
+     * @return ResponseFormatterInterface
+     */
+    public function setOptions(?array $options) : ResponseFormatterInterface;
+
+    /**
+     * @return array|null
+     */
+    public function getOptions() : ?array;
 
     /**
      * @return bool

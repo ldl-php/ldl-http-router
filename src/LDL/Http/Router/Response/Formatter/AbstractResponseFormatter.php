@@ -3,7 +3,6 @@
 namespace LDL\Http\Router\Response\Formatter;
 
 use LDL\Http\Router\Middleware\MiddlewareChainCollection;
-use LDL\Http\Router\Router;
 
 abstract class AbstractResponseFormatter implements ResponseFormatterInterface
 {
@@ -18,18 +17,35 @@ abstract class AbstractResponseFormatter implements ResponseFormatterInterface
     private $result;
 
     /**
+     * @var ?array
+     */
+    private $options;
+
+    /**
      * @var bool
      */
     private $isFormatted = false;
 
-    public function __construct(string $name)
+    public function __construct(string $name, ?array $options = null)
     {
         $this->name = $name;
+        $this->options = $options;
     }
 
     public function getName() : string
     {
         return $this->name;
+    }
+
+    public function getOptions() : ?array
+    {
+        return $this->options;
+    }
+
+    public function setOptions(?array $options) : ResponseFormatterInterface
+    {
+        $this->options = $options;
+        return $this;
     }
 
     public function getResult(): ?array

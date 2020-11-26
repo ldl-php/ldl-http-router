@@ -117,6 +117,28 @@ class RouterDispatcher
             }
 
             /**
+             * Set response parser options
+             */
+            $this->router->getResponseParserRepository()->getSelectedItem()->setOptions(
+                $route->getConfig()->getResponseParserOptions()
+            );
+
+            /**
+             * If the route contains a response formatter, use the response formatter configured in the route
+             */
+            if($route->getConfig()->getResponseFormatter()){
+                $this->router->getResponseFormatterRepository()
+                    ->select($route->getConfig()->getResponseFormatter());
+            }
+
+            /**
+             * Set response formatter options
+             */
+            $this->router->getResponseFormatterRepository()->getSelectedItem()->setOptions(
+                $route->getConfig()->getResponseFormatterOptions()
+            );
+
+            /**
              * Parse custom configuration directives before the route is about to be dispatched, these directives
              * can (mainly) modify the pre and post dispatch chains from the route and the router, selecting a different
              * response parser according to a certain custom configuration, etc.
@@ -141,8 +163,6 @@ class RouterDispatcher
         }catch(HttpMethodNotAllowedException $e){
 
             $this->router->getPreDispatchChain()->append(new RouteMethodMismatchDispatcher());
-
-        }catch(\Exception $e) {
 
         }
 

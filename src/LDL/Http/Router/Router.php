@@ -127,7 +127,7 @@ class Router
 
         $this->responseParserRepository = $responseParserRepository;
 
-        $defaultResponseFormatter = new ResponseFormatter('ldl.response.formatter.default');
+        $defaultResponseFormatter = new ResponseFormatter();
 
         /**
          * If no response formatter repo is passed, create a new instance

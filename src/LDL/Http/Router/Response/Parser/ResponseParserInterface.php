@@ -27,6 +27,17 @@ interface ResponseParserInterface
     public function getResult() : ?string;
 
     /**
+     * @param array $options
+     * @return ResponseParserInterface
+     */
+    public function setOptions(array $options) : ResponseParserInterface;
+
+    /**
+     * @return array
+     */
+    public function getOptions() : ?array;
+
+    /**
      * @param Router $router Router object
      * @param array $data data to parsed by the corresponding parser
      *

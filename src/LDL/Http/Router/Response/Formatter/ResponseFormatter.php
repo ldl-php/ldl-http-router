@@ -7,6 +7,13 @@ use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 
 class ResponseFormatter extends AbstractResponseFormatter
 {
+    private const NAME = 'ldl.response.formatter.default';
+
+    public function __construct(?string $name=null, ?array $options = null)
+    {
+        parent::__construct($name ?? self::NAME, $options);
+    }
+
     public function _format(MiddlewareChainCollection $collections) : ?array
     {
         $result = [];

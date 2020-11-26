@@ -38,6 +38,21 @@ class RouteConfig implements \JsonSerializable
     private $responseParser;
 
     /**
+     * @var ?array
+     */
+    private $responseParserOptions;
+
+    /**
+     * @var ?string
+     */
+    private $responseFormatter;
+
+    /**
+     * @var ?array
+     */
+    private $responseFormatterOptions;
+
+    /**
      * @var array
      */
     private $rawConfig;
@@ -53,8 +68,11 @@ class RouteConfig implements \JsonSerializable
         string $prefix,
         string $name,
         string $description,
-        string $responseParser = null,
-        array $rawConfig = [],
+        ?string $responseParser,
+        ?array $responseParserOptions,
+        ?string $responseFormatter,
+        ?array $responseFormatterOptions,
+        ?array $rawConfig,
         string $file = null
     )
     {
@@ -63,15 +81,18 @@ class RouteConfig implements \JsonSerializable
             ->setVersion($version)
             ->setRequestMethod($method)
             ->setResponseParser($responseParser)
+            ->setResponseParserOptions($responseParserOptions)
+            ->setResponseFormatter($responseFormatter)
+            ->setResponseFormatterOptions($responseFormatterOptions)
             ->setDescription($description)
-            ->setRawConfig($rawConfig)
+            ->setRawConfig($rawConfig ?? [])
             ->setFile($file);
     }
 
     public static function fromArray(array $config) : self
     {
         $merge = array_merge(get_class_vars(__CLASS__), $config);
-        return new static(...$merge);
+        return new self(...$merge);
     }
 
     public function toArray() : array
@@ -132,6 +153,21 @@ class RouteConfig implements \JsonSerializable
         return $this->responseParser;
     }
 
+    public function getResponseParserOptions() : ?array
+    {
+        return $this->responseParserOptions;
+    }
+
+    public function getResponseFormatter() : ?string
+    {
+        return $this->responseFormatter;
+    }
+
+    public function getResponseFormatterOptions() : ?array
+    {
+        return $this->responseFormatterOptions;
+    }
+
     public function getFile() : string
     {
         return $this->file;
@@ -173,6 +209,24 @@ class RouteConfig implements \JsonSerializable
     private function setResponseParser(string $parser=null) : self
     {
         $this->responseParser = $parser;
+        return $this;
+    }
+
+    private function setResponseParserOptions(?array $options) : self
+    {
+        $this->responseParserOptions = $options;
+        return $this;
+    }
+
+    private function setResponseFormatter(?string $name) : self
+    {
+        $this->responseFormatter = $name;
+        return $this;
+    }
+
+    private function setResponseFormatterOptions(?array $options) : self
+    {
+        $this->responseFormatterOptions = $options;
         return $this;
     }
 
