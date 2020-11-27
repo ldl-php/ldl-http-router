@@ -28,7 +28,7 @@ class JsonResponseParser extends AbstractResponseParser
     {
         parent::setOptions($options);
 
-        if(array_key_exists('content-type', $options)) {
+        if(null !== $options && array_key_exists('content-type', $options)) {
             $this->contentType = $options['content-type'];
             return $this;
         }
