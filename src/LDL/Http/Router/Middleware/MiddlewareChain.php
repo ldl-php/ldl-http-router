@@ -5,6 +5,7 @@ namespace LDL\Http\Router\Middleware;
 use LDL\Framework\Base\Exception\LockingException;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Dispatcher\StaticDispatcherInterface;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
@@ -186,7 +187,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                     $urlParameters
                 );
 
-                $result = $dispatch->getResult();
+                $result = $dispatch instanceof StaticDispatcherInterface ? $dispatch->getStaticResult() : $dispatch->getResult();
 
                 if (null !== $result) {
                     $this->appendToResult($result, $dispatch->getName());
@@ -198,7 +199,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
                     break;
                 }
             }catch(\Exception $e){
-                $result = $dispatch->getResult();
+                $result = $dispatch instanceof StaticDispatcherInterface ? $dispatch->getStaticResult() : $dispatch->getResult();
 
                 if (null !== $result) {
                     $this->appendToResult($result, $dispatch->getName());
