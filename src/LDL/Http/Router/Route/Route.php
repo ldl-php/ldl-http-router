@@ -5,6 +5,7 @@ namespace LDL\Http\Router\Route;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
 use LDL\Http\Router\Middleware\MiddlewareChain;
+use LDL\Http\Router\Middleware\MiddlewareChainCollection;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Router;
@@ -99,4 +100,14 @@ class Route implements RouteInterface
         return $this;
     }
 
+    public function getFullDispatcherChain() : MiddlewareChainCollection
+    {
+        $collection = new MiddlewareChainCollection();
+
+        $collection->append($this->preDispatchers)
+            ->append($this->dispatcherChain)
+            ->append($this->postDispatchers);
+
+        return $collection;
+    }
 }

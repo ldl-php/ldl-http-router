@@ -9,7 +9,7 @@ use LDL\Type\Collection\Interfaces;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
-use LDL\Type\Collection\Validator\UniqueKeyValidator;
+use LDL\Type\Collection\Validator\UniqueValidator;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHandlerCollectionInterface
@@ -25,12 +25,12 @@ class ExceptionHandlerCollection extends ObjectCollection implements ExceptionHa
     {
         parent::__construct($items);
 
-        $this->getValidatorChain()
+        $this->getValueValidatorChain()
             ->append(new InterfaceComplianceItemValidator(ExceptionHandlerInterface::class))
             ->lock();
 
         $this->getKeyValidatorChain()
-            ->append(new UniqueKeyValidator())
+            ->append(new UniqueValidator())
             ->lock();
     }
 

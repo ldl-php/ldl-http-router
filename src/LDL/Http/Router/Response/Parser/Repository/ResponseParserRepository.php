@@ -8,7 +8,7 @@ use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
-use LDL\Type\Collection\Validator\UniqueKeyValidator;
+use LDL\Type\Collection\Validator\UniqueValidator;
 
 class ResponseParserRepository extends ObjectCollection implements ResponseParserRepositoryInterface
 {
@@ -19,12 +19,12 @@ class ResponseParserRepository extends ObjectCollection implements ResponseParse
     {
         parent::__construct($items);
 
-        $this->getValidatorChain()
+        $this->getValueValidatorChain()
             ->append(new InterfaceComplianceItemValidator(ResponseParserInterface::class))
             ->lock();
 
         $this->getKeyValidatorChain()
-            ->append(new UniqueKeyValidator());
+            ->append(new UniqueValidator());
     }
 
     public function append($item, $key = null) : CollectionInterface

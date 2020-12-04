@@ -7,6 +7,7 @@ use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
 use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Middleware\MiddlewareChain;
+use LDL\Http\Router\Middleware\MiddlewareChainCollection;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Exception\CustomResponseException;
 use LDL\Http\Router\Response\Formatter\ResponseFormatter;
@@ -275,7 +276,7 @@ class Router
     /**
      * @return ExceptionHandlerCollection
      */
-    public function getExceptionHandlerCollection(): ExceptionHandlerCollection
+    public function getExceptionHandlers(): ExceptionHandlerCollection
     {
         return $this->exceptionHandlerCollection;
     }
@@ -286,6 +287,16 @@ class Router
         $this->postDispatchChain->lock();
 
         return $this;
+    }
+
+    public function getFullDispatcherChain() : MiddlewareChainCollection
+    {
+        $collection = new MiddlewareChainCollection();
+
+        $collection->append($this->preDispatchChain)
+            ->append($this->postDispatchChain);
+
+        return $collection;
     }
 
     /**

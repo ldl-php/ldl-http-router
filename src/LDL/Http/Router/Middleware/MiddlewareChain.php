@@ -16,7 +16,7 @@ use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
-use LDL\Type\Collection\Validator\UniqueKeyValidator;
+use LDL\Type\Collection\Validator\UniqueValidator;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
@@ -73,12 +73,12 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         $this->name = $name;
         $this->isActive = $isActive;
 
-        $this->getValidatorChain()
+        $this->getValueValidatorChain()
             ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class))
             ->lock();
 
         $this->getKeyValidatorChain()
-            ->append(new UniqueKeyValidator())
+            ->append(new UniqueValidator())
             ->lock();
     }
 
@@ -238,7 +238,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         $lastExecutedDispatcher = $this->lastExecuted;
         $resultKey = $lastExecutedDispatcher->getName();
         $route = $router->getCurrentRoute();
-        $routerHandlers = $router->getExceptionHandlerCollection();
+        $routerHandlers = $router->getExceptionHandlers();
 
         if(null === $route){
             $exception = $routerHandlers->handle(

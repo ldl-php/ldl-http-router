@@ -7,7 +7,7 @@ use LDL\Type\Collection\Traits\Selection\SingleSelectionTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
-use LDL\Type\Collection\Validator\UniqueKeyValidator;
+use LDL\Type\Collection\Validator\UniqueValidator;
 
 class ResponseFormatterRepository extends ObjectCollection implements ResponseFormatterRepositoryInterface
 {
@@ -18,14 +18,14 @@ class ResponseFormatterRepository extends ObjectCollection implements ResponseFo
     {
         parent::__construct($items);
 
-        $this->getValidatorChain()
+        $this->getValueValidatorChain()
             ->append(
                 new InterfaceComplianceItemValidator(ResponseFormatterInterface::class)
             );
 
         $this->getKeyValidatorChain()
             ->append(
-                new UniqueKeyValidator()
+                new UniqueValidator()
             );
     }
 

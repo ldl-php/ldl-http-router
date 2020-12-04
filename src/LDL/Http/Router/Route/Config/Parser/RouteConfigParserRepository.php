@@ -12,7 +12,7 @@ class RouteConfigParserRepository extends ObjectCollection implements RouteConfi
     {
         parent::__construct($items);
 
-        $this->getValidatorChain()
+        $this->getValueValidatorChain()
             ->append(new InterfaceComplianceItemValidator(RouteConfigParserInterface::class))
             ->lock();
     }

@@ -10,9 +10,9 @@ use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
-use LDL\Type\Collection\Interfaces\Validation\HasValidatorChainInterface;
+use LDL\Type\Collection\Interfaces\Validation\HasValueValidatorChainInterface;
 
-interface MiddlewareChainInterface extends CollectionInterface, HasValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface, MiddlewareInterface
+interface MiddlewareChainInterface extends CollectionInterface, HasValueValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface, MiddlewareInterface
 {
     /**
      * Obtains the last executed dispatcher in the middleware chain
