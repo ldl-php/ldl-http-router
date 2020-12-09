@@ -7,6 +7,7 @@ use LDL\Framework\Base\Traits\IsActiveInterfaceTrait;
 use LDL\Framework\Base\Traits\LockableObjectInterfaceTrait;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
 use LDL\Http\Router\Router;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
@@ -14,6 +15,7 @@ abstract class AbstractMiddleware implements MiddlewareInterface
 {
     use LockableObjectInterfaceTrait;
     use IsActiveInterfaceTrait;
+    use RequestValidatorChainTrait;
 
     /**
      * @var string

@@ -2,10 +2,10 @@
 
 namespace LDL\Http\Router\Middleware;
 
+use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
-use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
@@ -16,7 +16,7 @@ use LDL\Type\Collection\Validator\UniqueValidator;
 class DispatcherRepository extends ObjectCollection
 {
     use KeyValidatorChainTrait;
-    use NamespaceableTrait;
+    use NamespaceInterfaceTrait;
     use ValueValidatorChainTrait;
     use PrioritySortingTrait;
     use FilterByInterfaceTrait;

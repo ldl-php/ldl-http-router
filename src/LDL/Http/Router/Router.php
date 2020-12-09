@@ -22,10 +22,15 @@ use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepositoryInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
+use LDL\Http\Router\Route\Validator\HasValidatorChainInterface;
+use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
 use Phroute\Phroute\RouteCollector;
 
-class Router
+class Router implements HasValidatorChainInterface
 {
+    use RequestValidatorChainTrait;
+
     /**
      * @var RouteCollector
      */
@@ -308,6 +313,8 @@ class Router
         $this->dispatcher->initializeRoutes($this->collector->getData());
 
         try {
+            $this->getValidatorChain()->validate($this);
+
             $this->dispatcher
                 ->dispatch(
                     $this->request->getMethod(),
@@ -358,6 +365,27 @@ class Router
 
             $this->response->setContent($e->getMessage());
 
+        }catch(ValidationTerminateException $e){
+            /**
+             * @var ResponseParserInterface $parser
+             */
+            $parser = $this->responseParserRepository->getSelectedItem();
+
+            if (false === $parser->isParsed()) {
+
+                $parser->parse(
+                    $this,
+                    json_decode($e->getMessage(), true, 2048, \JSON_THROW_ON_ERROR)
+                );
+            }
+
+            /**
+             * Set the content type header according to the response parser
+             */
+            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+
+            $this->response->setContent($parser->getResult());
+            $this->response->setStatusCode($e->getCode());
         }
 
         return $this->response;

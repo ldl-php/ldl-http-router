@@ -8,6 +8,7 @@ use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Response\Exception\CustomResponseException;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
+use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
@@ -83,6 +84,7 @@ class RouterDispatcher
      * @return void
      *
      * @throws CustomResponseException
+     * @throws ValidationTerminateException
      * @throws \Exception
      */
     public function dispatch(string $httpMethod, string $uri) : void
@@ -228,6 +230,8 @@ class RouterDispatcher
             );
 
         }catch(CustomResponseException $e){
+            throw $e;
+        }catch(ValidationTerminateException $e){
             throw $e;
         }catch(\Exception $e){
 

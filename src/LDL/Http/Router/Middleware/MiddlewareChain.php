@@ -3,14 +3,17 @@
 namespace LDL\Http\Router\Middleware;
 
 use LDL\Framework\Base\Exception\LockingException;
+use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\StaticDispatcherInterface;
+use LDL\Http\Router\Route\Validator\Exception\ValidationPartialException;
+use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
+use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
-use LDL\Type\Collection\Traits\Namespaceable\NamespaceableTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
@@ -22,11 +25,12 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
 {
     use KeyValidatorChainTrait;
-    use NamespaceableTrait;
+    use NamespaceInterfaceTrait;
     use ValueValidatorChainTrait;
     use PrioritySortingTrait;
     use FilterByInterfaceTrait;
     use FilterByActiveStateTrait;
+    use RequestValidatorChainTrait;
 
     /**
      * @var string
@@ -169,6 +173,13 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         $this->result = null;
         $this->isDispatched = true;
 
+        $this->getValidatorChain()->validate($router);
+        $partialExceptions = $this->getValidatorChain()->getPartialExceptions();
+
+        foreach($partialExceptions as $name => $message){
+            $this->appendToResult($message, $name);
+        }
+
         /**
          * @var MiddlewareInterface $dispatch
          */
@@ -269,7 +280,6 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
             }
 
         }catch (\Exception $e){
-
             $exception = $routerHandlers->handle(
                 $router,
                 $e,

@@ -11,6 +11,7 @@ use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
+use LDL\Http\Router\Route\Validator\RequestValidatorChain;
 use LDL\Http\Router\Router;
 
 class RouteFactory
@@ -21,6 +22,7 @@ class RouteFactory
     public static function fromJsonFile(
         string $file,
         Router $router,
+        RequestValidatorChain $requestValidators = null,
         DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection
@@ -42,6 +44,7 @@ class RouteFactory
         return self::fromJson(
             file_get_contents($file),
             $router,
+            $requestValidators,
             $dispatcherRepository,
             $routeExceptionHandlers
         );
@@ -50,6 +53,7 @@ class RouteFactory
     public static function fromJson(
         string $json,
         Router $router,
+        RequestValidatorChain $requestValidators = null,
         DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
@@ -62,6 +66,7 @@ class RouteFactory
                     \JSON_THROW_ON_ERROR
                 ),
                 $router,
+                $requestValidators,
                 $dispatcherRepository,
                 $routeExceptionHandlers
             );
@@ -73,6 +78,7 @@ class RouteFactory
     public static function fromArray(
         array $data,
         Router $router,
+        RequestValidatorChain $requestValidators = null,
         DispatcherRepository $dispatcherRepository = null,
         ExceptionHandlerCollection $routeExceptionHandlers = null
     ): RouteCollection {
@@ -116,20 +122,24 @@ class RouteFactory
                 self::getMiddleware(
                     $route,
                     'preDispatch',
+                    $requestValidators,
                     $dispatcherRepository
                 ),
                 self::getMiddleware(
                     $route,
                     'dispatchers',
+                    $requestValidators,
                     $dispatcherRepository
                 ),
                 self::getMiddleware(
                     $route,
                     'postDispatch',
+                    $requestValidators,
                     $dispatcherRepository
                 ),
-                self::getHandlerExceptionParser($route, $routeExceptionHandlers),
+                self::getHandlerExceptionParser($route, $routeExceptionHandlers)
             ));
+
         }
 
         return $collection;
@@ -261,6 +271,7 @@ class RouteFactory
     private static function getMiddleware(
         array $route,
         string $middlewareType,
+        RequestValidatorChain $requestValidators = null,
         DispatcherRepository $dispatcherRepository = null
     ): ?MiddlewareChainInterface
     {
@@ -279,7 +290,7 @@ class RouteFactory
         $list = $route['middleware'][$middlewareType];
 
         if(!is_array($list)){
-            $list = [ 'list' => [$list ]];
+            $list = [ 'list' => [$list]];
         }
 
         $chain = new MiddlewareChain(array_key_exists('name', $list) ? $list['name'] : null);
@@ -288,7 +299,7 @@ class RouteFactory
             return $chain;
         }
 
-        self::parseDispatchers($list['list'], $chain, $dispatcherRepository);
+        self::parseDispatchers($list['list'], $chain, $dispatcherRepository, $requestValidators);
 
         return $chain;
     }
@@ -296,21 +307,66 @@ class RouteFactory
     private static function parseDispatchers(
         array $list,
         MiddlewareChainInterface $chain,
-        DispatcherRepository $dispatcherRepository
+        DispatcherRepository $dispatcherRepository,
+        RequestValidatorChain $requestValidators = null
     ) : void
     {
         foreach ($list as $key => $values) {
+            if($key === 'dispatchers'){
+                foreach($values as $item){
+                    $chain->append($dispatcherRepository->offsetGet($item['dispatcher']));
+
+                    if(false === array_key_exists('validators', $item)){
+                        continue;
+                    }
+
+                    $validators = $item['validators'];
+
+                    if(count($validators) === 0){
+                        continue;
+                    }
+
+                    if(false === is_array($validators)){
+                        $validators = [
+                            'list' => [
+                                ['name' => $validators]
+                            ]
+                        ];
+                    }
+
+                    if(null === $requestValidators){
+                        throw new \LogicException('No request validator chain was given');
+                    }
+
+                    $defaultStrict = array_key_exists('strict', $validators) ? (bool) $validators['strict'] : true;
+
+                    foreach($validators['list'] as $validator){
+
+                        if(false === array_key_exists('name', $validator)){
+                            continue;
+                        }
+
+                        $strict = array_key_exists('strict', $validator) ? (bool) $validator['strict'] : $defaultStrict;
+
+                        $offsetValidator = $requestValidators->offsetGet($validator['name']);
+
+                        $chain->getValidatorChain()->append($offsetValidator->getNewInstance($strict));
+                    }
+                }
+                continue;
+            }
+
             $isGroup = is_array($values);
 
             if($isGroup){
 
                 if(is_int($key)){
-                    self::parseDispatchers($values, $chain, $dispatcherRepository);
+                    self::parseDispatchers($values, $chain, $dispatcherRepository, $requestValidators);
                     continue;
                 }
 
                 $group = new MiddlewareChain($key);
-                self::parseDispatchers($values, $group, $dispatcherRepository);
+                self::parseDispatchers($values, $group, $dispatcherRepository, $requestValidators);
                 $chain->append($group);
                 continue;
             }

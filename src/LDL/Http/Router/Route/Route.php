@@ -8,10 +8,14 @@ use LDL\Http\Router\Middleware\MiddlewareChain;
 use LDL\Http\Router\Middleware\MiddlewareChainCollection;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
+use LDL\Http\Router\Route\Validator\HasValidatorChainInterface;
+use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
 use LDL\Http\Router\Router;
 
-class Route implements RouteInterface
+class Route implements RouteInterface, HasValidatorChainInterface
 {
+    use RequestValidatorChainTrait;
+
     /**
      * @var Router
      */

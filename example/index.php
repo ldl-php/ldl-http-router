@@ -10,6 +10,8 @@ use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
 use LDL\Http\Router\Handler\Exception\Handler\HttpMethodNotAllowedExceptionHandler;
 use LDL\Http\Router\Handler\Exception\Handler\HttpRouteNotFoundExceptionHandler;
 use LDL\Http\Router\Handler\Exception\Handler\InvalidContentTypeExceptionHandler;
+use LDL\Http\Router\Route\Validator\AbstractRequestValidator;
+use LDL\Http\Router\Route\Validator\Exception\ValidateException;
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
@@ -21,6 +23,7 @@ use LDL\Http\Router\Route\RouteInterface;
 use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Middleware\AbstractMiddleware;
 use LDL\Http\Router\Middleware\DispatcherRepository;
+use LDL\Http\Router\Route\Validator\RequestValidatorChain;
 
 class Dispatcher extends AbstractMiddleware
 {
@@ -32,7 +35,7 @@ class Dispatcher extends AbstractMiddleware
     )
     {
         return [
-            'asdasd' => $urlParams->get('urlName')
+            'result' => $urlParams->get('urlName')
         ];
     }
 }
@@ -163,7 +166,7 @@ class RouterPreDispatch extends AbstractMiddleware
         Router $router, ParameterBag $urlParameters = null
     )
     {
-        return ['pre global'];
+        return ['age' => $request->get('age')];
     }
 }
 
@@ -176,6 +179,69 @@ class RouterPostDispatch extends AbstractMiddleware
     )
     {
         return ['post global'];
+    }
+}
+
+class AgeValidator extends AbstractRequestValidator
+{
+    private const NAME = 'age.validator';
+
+    public function __construct(?string $name=null, bool $isStrict = true)
+    {
+        parent::__construct($name ?? self::NAME, $isStrict);
+    }
+
+    public function _validate(Router $router): ?array
+    {
+        $request = $router->getRequest();
+
+        if((int) $request->get('age') < 50){
+            throw new ValidateException("Age must be greater than 50", Response::HTTP_CODE_BAD_REQUEST);
+        }
+
+        return null;
+    }
+}
+
+class NameLengthValidator extends AbstractRequestValidator
+{
+    private const NAME = 'name.length.validator';
+
+    public function __construct(?string $name=null, bool $isStrict = true)
+    {
+        parent::__construct($name ?? self::NAME, $isStrict);
+    }
+
+    public function _validate(Router $router): ?array
+    {
+        $request = $router->getRequest();
+
+        if(strlen($request->get('name')) < 3){
+            throw new ValidateException("Name must be larger than 3", Response::HTTP_CODE_BAD_REQUEST);
+        }
+
+        return null;
+    }
+}
+
+class ContentTypeValidator extends AbstractRequestValidator
+{
+    private const NAME = 'content-type.validator';
+
+    public function __construct(?string $name=null, bool $isStrict = true)
+    {
+        parent::__construct($name ?? self::NAME, $isStrict);
+    }
+
+    public function _validate(Router $router): ?array
+    {
+        $request = $router->getRequest();
+
+        if($request->getHeaderBag()->get('Content-Type') !== 'application/json'){
+            throw new ValidateException("Invalid content type", Response::HTTP_CODE_BAD_REQUEST);
+        }
+
+        return null;
     }
 }
 
@@ -196,8 +262,14 @@ $router = new Router(
     $chainPost
 );
 
-$dispatcherRepository = new DispatcherRepository();
+//$router->getValidatorChain()->append(new ContentTypeValidator());
 
+$requestValidatorsRepository = new RequestValidatorChain();
+$requestValidatorsRepository->append(new AgeValidator())
+->append(new ContentTypeValidator())
+->append(new NameLengthValidator());
+
+$dispatcherRepository = new DispatcherRepository();
 $dispatcherRepository->append(new Dispatcher('dispatcher'))
     ->append(new Dispatcher2('dispatcher2'))
     ->append(new Dispatcher3('dispatcher3'))
@@ -209,6 +281,7 @@ $routeExceptionHandlers->append(new TestExceptionHandler('test.exception.handler
 $routes = RouteFactory::fromJsonFile(
     './routes.json',
     $router,
+    $requestValidatorsRepository,
     $dispatcherRepository,
     $routeExceptionHandlers
 );

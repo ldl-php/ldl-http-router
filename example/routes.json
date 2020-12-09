@@ -14,12 +14,50 @@
         "dispatchers": {
           "name": "main dispatchers",
           "list": [
-            {"groupA": [
-              {"groupB": [
-                {"groupC": ["dispatcher"]},
-                "dispatcher3"
-              ]}
-            ]},
+            {
+              "groupA": {
+                "groupB": {
+                  "groupC": {
+                    "dispatchers": [
+                      {
+                        "dispatcher": "dispatcher",
+                        "validators": {
+                          "strict": false,
+                          "list": [
+                            {
+                              "name": "age.validator"
+                            },
+                            {
+                              "name": "name.length.validator"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "dispatcher": "dispatcher3"
+                      }
+                    ]
+                  },
+                  "dispatchers": [
+                    {
+                      "dispatcher": "dispatcher3",
+                      "validators": {
+                        "list": [
+                          {
+                            "name": "age.validator",
+                            "strict": false
+                          },
+                          {
+                            "name": "content-type.validator",
+                            "strict": false
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
             "dispatcher2"
           ]
         },
