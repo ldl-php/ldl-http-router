@@ -3,77 +3,60 @@
     {
       "name": "test",
       "version": "1.0",
+      "description": "A test route",
       "url": {
         "prefix": "list/{urlName}"
       },
       "request": {
-        "method": "get"
+        "method": "post",
+        "body": {
+          "parser": "ldl.request.json.parser"
+        },
+        "validators": {
+            "list": [
+              "age.request.validator",
+              "name.length.validator"
+            ]
+        }
       },
-      "description": "A test route",
       "middleware": {
         "dispatchers": {
-          "name": "main dispatchers",
           "list": [
             {
-              "groupA": {
-                "groupB": {
-                  "groupC": {
-                    "dispatchers": [
-                      {
-                        "dispatcher": "dispatcher",
-                        "validators": {
-                          "strict": false,
-                          "list": [
-                            {
-                              "name": "age.validator"
-                            },
-                            {
-                              "name": "name.length.validator"
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "dispatcher": "dispatcher3"
-                      }
-                    ]
-                  },
-                  "dispatchers": [
-                    {
-                      "dispatcher": "dispatcher3",
-                      "validators": {
-                        "list": [
-                          {
-                            "name": "age.validator",
-                            "strict": false
-                          },
-                          {
-                            "name": "content-type.validator",
-                            "strict": false
-                          }
-                        ]
-                      }
-                    }
-                  ]
+              "name": "dispatcher",
+              "block": true,
+              "parameters": [
+                {
+                  "name": "name",
+                  "source": "request.get",
+                  "resolver": "name.resolver"
+                },
+                {
+                  "name": "request",
+                  "source": "request.object"
                 }
-              }
+              ]
             },
-            "dispatcher2"
-          ]
-        },
-        "postDispatch": {
-          "name": "Post dispatchers",
-          "list": [
-            "post.dispatch"
+            {
+              "name": "dispatcher3",
+              "mode": "block",
+              "parameters": [
+                {
+                  "name": "users",
+                  "source": "request.body.parsed",
+                  "resolver": "users.resolver"
+                },
+                {
+                  "name": "route.main.dispatcher",
+                  "source": "response.result.param"
+                }
+              ]
+            }
           ]
         }
       },
       "response": {
-        "exception": {
-          "handlers": [
-            "test.exception.handler"
-          ]
-        },
+        "success": 200,
         "parser": {
           "name": "ldl.response.parser.json",
           "options": {
@@ -97,15 +80,8 @@
       "name": "exception",
       "description": "Exception test",
       "middleware": {
-        "dispatchers": "dispatcher2",
+        "dispatchers": ["dispatcher2"],
         "preDispatch": ["predispatch"]
-      },
-      "response": {
-        "exception": {
-          "handlers": [
-            "test.exception.handler"
-          ]
-        }
       }
     }
   ]

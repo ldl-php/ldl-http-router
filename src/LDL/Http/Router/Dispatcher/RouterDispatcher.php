@@ -3,21 +3,24 @@
 namespace LDL\Http\Router\Dispatcher;
 
 use LDL\Http\Router\Exception\UndispatchedRouterException;
-use LDL\Http\Router\Middleware\MiddlewareChainCollection;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResult;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultInterface;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepositoryInterface;
 use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Response\Exception\CustomResponseException;
+use LDL\Http\Router\Container\RouterContainer;
+use LDL\Http\Router\Container\RouterContainerInterface;
+use LDL\Http\Router\Container\Source\ContainerStaticSource;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
-use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
 use LDL\Http\Router\Router;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use Phroute\Phroute\Exception\HttpMethodNotAllowedException;
 use Phroute\Phroute\Exception\HttpRouteNotFoundException;
-use Phroute\Phroute\RouteDataInterface;
 use Phroute\Phroute\Route as PhRoute;
+use Phroute\Phroute\RouteDataInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-class RouterDispatcher
+class RouterDispatcher implements RouterDispatcherInterface
 {
     private $staticRouteMap;
 
@@ -29,10 +32,13 @@ class RouterDispatcher
     private $router;
 
     /**
-     * @var MiddlewareChainCollection
+     * @var MiddlewareChainResultInterface
      */
     private $result;
 
+    /**
+     * @var RouteInterface
+     */
     private $matchedRoute;
 
     /**
@@ -48,6 +54,7 @@ class RouterDispatcher
     public function __construct(Router $router)
     {
         $this->router = $router;
+        $this->urlParameters = new ParameterBag();
     }
 
     public function initializeRoutes(RouteDataInterface $data) : self
@@ -59,10 +66,10 @@ class RouterDispatcher
     }
 
     /**
-     * @return MiddlewareChainCollection
+     * @return MiddlewareChainResultInterface
      * @throws UndispatchedRouterException
      */
-    public function getResult() : MiddlewareChainCollection
+    public function getResult() : MiddlewareChainResultInterface
     {
         if(null === $this->result){
             $msg = 'You can not obtain the result of an "undispatched" router dispatcher';
@@ -72,99 +79,122 @@ class RouterDispatcher
         return $this->result;
     }
 
-    public function getUrlParameters() : ?ParameterBag
+    public function getUrlParameters() : ParameterBag
     {
         return $this->urlParameters;
     }
 
     /**
+     * @param RouterContainerInterface $sources
      * @param string $httpMethod
      * @param string $uri
      *
+     * @throws \Exception
+     *
      * @return void
      *
-     * @throws CustomResponseException
-     * @throws ValidationTerminateException
-     * @throws \Exception
      */
-    public function dispatch(string $httpMethod, string $uri) : void
+    public function dispatch(
+        RouterContainerInterface $sources,
+        string $httpMethod,
+        string $uri
+    ) : void
     {
-        $this->result = new MiddlewareChainCollection();
+        $dispatchers        = $sources->getDispatchers();
+        $requestValidators  = $this->router->getRequestValidatorChain();
+        $responseValidators = $this->router->getResponseValidatorChain();
+        $requestBodyParsers = $sources->getRequestBodyParsers();
+
+        $this->result = new MiddlewareChainResult();
 
         $route = null;
 
-        try {
-            /**
-             * If the route is not found, an exception will be thrown
-             *
-             * @var Route $route
-             */
-            [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
+        /**
+         * If the route is not found, an exception will be thrown
+         *
+         * @var Route $route
+         */
+        [$route, $filters, $vars] = $this->dispatchRoute($httpMethod, trim($uri, '/'));
 
-            /**
-             * Set the current route in the router
-             */
-            $this->router->setCurrentRoute($route);
+        /**
+         * Add matched parameters to url parameters source
+         */
+        $sources->getUrlParameters()->appendMany($vars);
 
-            $urlParameters = new ParameterBag();
-            $urlParameters->add($vars);
-            $this->urlParameters = $urlParameters;
+        /**
+         * Add current route to parameter sources
+         */
+        $sources->append(
+            new ContainerStaticSource(
+                RouterContainer::SRC_REQUEST_ROUTE_CURRENT,
+                $route
+            )
+        );
 
-            /**
-             * If the route contains a response parser, use the response parser configured in the route
-             */
-            if ($route->getConfig()->getResponseParser()) {
-                $this->router->getResponseParserRepository()
-                    ->select($route->getConfig()->getResponseParser());
-            }
+        /**
+         * Set the current route in the router
+         */
+        $this->router->setCurrentRoute($route);
 
-            /**
-             * Set response parser options
-             */
-            $this->router->getResponseParserRepository()->getSelectedItem()->setOptions(
-                $route->getConfig()->getResponseParserOptions()
+        /**
+         * Obtain request body parser if there's one
+         */
+        $requestBodyParser = $route->getConfig()->getRequestParser();
+
+        /**
+         * If there's a request body parser then parse the request body with the selected parser
+         */
+        if(null !== $requestBodyParser){
+            $requestBodyParsers->select($requestBodyParser);
+
+            $sources->append(
+                new ContainerStaticSource(
+                    RouterContainer::SRC_REQUEST_BODY_PARSED,
+                    $requestBodyParsers->getSelectedItem()
+                        ->parse($sources->get(RouterContainer::SRC_REQUEST_BODY_CONTENT))
+                )
             );
+        }
 
-            /**
-             * If the route contains a response formatter, use the response formatter configured in the route
-             */
-            if($route->getConfig()->getResponseFormatter()){
-                $this->router->getResponseFormatterRepository()
-                    ->select($route->getConfig()->getResponseFormatter());
-            }
+        /**
+         * Lock request body parser repository and lock selection
+         */
+        $requestBodyParsers->lockSelection()
+            ->lock();
 
-            /**
-             * Set response formatter options
-             */
-            $this->router->getResponseFormatterRepository()->getSelectedItem()->setOptions(
-                $route->getConfig()->getResponseFormatterOptions()
-            );
+        /**
+         * Parse custom configuration directives before the route is about to be dispatched, these directives
+         * can (mainly) modify the pre and post dispatch chains from the route and the router, selecting a different
+         * response parser according to a certain custom configuration, etc.
+         */
+        $sources->getConfigParsers()->parse($route);
 
-            /**
-             * Parse custom configuration directives before the route is about to be dispatched, these directives
-             * can (mainly) modify the pre and post dispatch chains from the route and the router, selecting a different
-             * response parser according to a certain custom configuration, etc.
-             */
-            $this->router->getConfigParserRepository()->parse($route);
+        /**
+         * If the route contains exception handlers, select them
+         */
+        $routeExceptionHandlers = $route->getConfig()->getExceptionHandlerList();
 
-            $routeMiddleware = [
-                'pre' => $route->getPreDispatchChain()->sortByPriority(PrioritySortingInterface::SORT_ASCENDING),
-                'main' => $route->getDispatchChain()->sortByPriority(PrioritySortingInterface::SORT_ASCENDING),
-                'post' => $route->getPostDispatchChain()->sortByPriority(PrioritySortingInterface::SORT_ASCENDING)
-            ];
+        if($routeExceptionHandlers->count() > 0){
+            $sources
+                ->getExceptionHandlers()
+                ->select($routeExceptionHandlers);
+        }
 
-            /**
-             * Lock all of the route's middleware
-             */
-            $route->lockMiddleware();
+        $sources->getExceptionHandlers()
+            ->lock()
+            ->lockSelection();
 
-        }catch(HttpRouteNotFoundException $e) {
+        /**
+         * If the route contains a response parser, use the response parser configured in the route
+         */
+        if ($route->getConfig()->getResponseParser()) {
 
-            $this->router->getPreDispatchChain()->append(new RouteNotFoundDispatcher());
-
-        }catch(HttpMethodNotAllowedException $e){
-
-            $this->router->getPreDispatchChain()->append(new RouteMethodMismatchDispatcher());
+            $sources->getResponseParsers()
+                ->select($route->getConfig()->getResponseParser())
+                ->getSelectedItem()
+                ->setOptions(
+                    $route->getConfig()->getResponseParserOptions()
+                );
 
         }
 
@@ -172,70 +202,131 @@ class RouterDispatcher
          * From this point on, response parsers are locked and can no longer be selected. This means that
          * any kind of middleware is not allowed to select a different response parser.
          */
-        $this->router->getResponseParserRepository()->lockSelection();
+        $sources->getResponseParsers()
+            ->lock()
+            ->lockSelection();
 
-        $routerMiddleware = [
-            'pre' => $this->router->getPreDispatchChain()->sortByPriority(PrioritySortingInterface::SORT_ASCENDING),
-            'post' => $this->router->getPostDispatchChain()->sortByPriority(PrioritySortingInterface::SORT_ASCENDING)
-        ];
-
-        $this->router->lockMiddleware();
-
-        $this->dispatchMiddleware(
-            $routerMiddleware['pre'],
-            $route
-        );
-
-        if(null !== $route) {
-            $route->lockMiddleware();
-
-            $this->dispatchMiddleware(
-                $routeMiddleware['pre'],
-                $route
-            );
-
-            $this->dispatchMiddleware(
-                $routeMiddleware['main'],
-                $route
-            );
-
-            $this->dispatchMiddleware(
-                $routeMiddleware['post'],
-                $route
-            );
+        /**
+         * If the route contains a response formatter, use the response formatter configured in the route
+         */
+        if($route->getConfig()->getResponseFormatter()){
+                $sources->getResponseFormatters()
+                ->select($route->getConfig()->getResponseFormatter())
+                ->getSelectedItem()
+                ->setOptions(
+                    $route->getConfig()->getResponseFormatterOptions()
+                );
         }
 
+        $sources->getResponseFormatters()
+            ->lock()
+            ->lockSelection();
+
+        /**
+         * If the route config has request validators, select them and validate
+         */
+        if($route->getConfig()->getRequestValidators()->count() > 0){
+            $requestValidators->select($route->getConfig()->getRequestValidators())
+                ->getSelectedItems()
+                ->validate($this->router);
+        }
+
+        $requestValidators->lock()
+            ->lockSelection();
+
+        /**
+         * If the route config has response validators, select them
+         */
+        if($route->getConfig()->getResponseValidators()->count() > 0) {
+            $responseValidators->select($route->getConfig()->getResponseValidators())
+                ->getSelectedItems()
+                ->validate($this->router);
+        }
+
+        $responseValidators->lockSelection()
+            ->lock();
+
+        /**
+         * Router pre dispatch execution
+         */
         $this->dispatchMiddleware(
-            $routerMiddleware['post'],
-            $route
+            'router.pre',
+            $sources,
+            $this->router->getPreDispatchList()->keys(),
+            $dispatchers,
+            $route->getConfig()->getPostDispatchers()
         );
+
+        /**
+         * Execute route pre dispatchers
+         */
+        $this->dispatchMiddleware(
+            'route.pre',
+            $sources,
+            $route->getConfig()->getPreDispatchers()->keys(),
+            $dispatchers,
+            $route->getConfig()->getPreDispatchers()
+        );
+
+        /**
+         * Execute route dispatchers
+         */
+        $this->dispatchMiddleware(
+            'route.main',
+            $sources,
+            $route->getConfig()->getDispatchers()->keys(),
+            $dispatchers,
+            $route->getConfig()->getDispatchers(),
+        );
+
+        /**
+         * Execute route post dispatchers
+         */
+        $this->dispatchMiddleware(
+            'route.post',
+            $sources,
+            $route->getConfig()->getPostDispatchers()->keys(),
+            $dispatchers,
+            $route->getConfig()->getPostDispatchers(),
+        );
+
+        /**
+         * Router post dispatch execution
+         */
+        $this->dispatchMiddleware(
+            'router.post',
+            $sources,
+            $this->router->getPostDispatchList()->keys(),
+            $dispatchers,
+            $route->getConfig()->getPostDispatchers()
+        );
+
+        $responseValidators->validate($this->router);
     }
 
     private function dispatchMiddleware(
+        string $context,
+        RouterContainerInterface $sources,
+        array $dispatcherList,
         MiddlewareChainInterface $chain,
-        RouteInterface $route = null
+        MiddlewareConfigRepositoryInterface $configRepository
     ) : void
     {
-        $this->result->append($chain);
-
-        try {
-            /**
-             * Dispatch chain
-             */
-            $chain->dispatch(
-                $this->router->getRequest(),
-                $this->router->getResponse(),
-                $this->router,
-                $this->urlParameters
-            );
-
-        }catch(CustomResponseException $e){
-            throw $e;
-        }catch(ValidationTerminateException $e){
-            throw $e;
-        }catch(\Exception $e){
-
+        if(count($dispatcherList) === 0){
+            return;
         }
+
+        $chain->filterByKeys($dispatcherList)
+            ->sortByPriority(PrioritySortingInterface::SORT_ASCENDING)
+            ->lock()
+            ->lockSelection()
+            ->dispatch(
+                $context,
+                $this->router->getEventBus(),
+                $sources,
+                $configRepository,
+                $sources->getExceptionHandlers()->getSelectedItems(),
+            );
     }
 
     /**
@@ -306,6 +397,7 @@ class RouterDispatcher
      * @param $uri
      * @return mixed
      * @throws HttpRouteNotFoundException
+     * @throws HttpMethodNotAllowedException
      */
     private function dispatchVariableRoute($httpMethod, $uri)
     {
@@ -318,7 +410,7 @@ class RouterDispatcher
 
             $count = count($matches);
 
-            while(!isset($data['routeMap'][$count++]));
+            while(!isset($data['routeMap'][$count++])){}
 
             $routes = $data['routeMap'][$count - 1];
 

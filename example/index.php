@@ -2,130 +2,73 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
-use LDL\Http\Core\Request\Request;
-use LDL\Http\Core\Request\RequestInterface;
+use LDL\Framework\Base\Traits\NameableTrait;
 use LDL\Http\Core\Response\Response;
 use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Handler\Exception\Handler\HttpMethodNotAllowedExceptionHandler;
-use LDL\Http\Router\Handler\Exception\Handler\HttpRouteNotFoundExceptionHandler;
-use LDL\Http\Router\Handler\Exception\Handler\InvalidContentTypeExceptionHandler;
-use LDL\Http\Router\Route\Validator\AbstractRequestValidator;
-use LDL\Http\Router\Route\Validator\Exception\ValidateException;
+use LDL\Http\Router\Validator\Request\AbstractRequestValidator;
+use LDL\Http\Router\Validator\Request\Exception\RequestValidateException;
+use LDL\Http\Router\Validator\Response\AbstractResponseValidator;
+use LDL\Http\Router\Validator\Response\Exception\ResponseValidateException;
+use LDL\Http\Router\Validator\Response\ResponseValidatorInterface;
 use LDL\Http\Router\Router;
 use LDL\Http\Router\Route\Factory\RouteFactory;
 use LDL\Http\Router\Route\Group\RouteGroup;
 use LDL\Http\Router\Route\Config\Parser\RouteConfigParserInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
-use Symfony\Component\HttpFoundation\ParameterBag;
 use LDL\Http\Router\Handler\Exception\AbstractExceptionHandler;
 use LDL\Http\Router\Route\RouteInterface;
-use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
-use LDL\Http\Router\Middleware\AbstractMiddleware;
-use LDL\Http\Router\Middleware\DispatcherRepository;
-use LDL\Http\Router\Route\Validator\RequestValidatorChain;
+use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
+use LDL\Http\Router\Route\Parameter\Resolver\RouteParameterResolverRepository;
+use LDL\Http\Router\Route\Parameter\Resolver\RouteParameterResolverInterface;
+use LDL\Http\Router\Middleware\MiddlewareTrait;
+use LDL\Http\Core\Request\RequestInterface;
+use LDL\Http\Router\Middleware\MiddlewareInterface;
+use LDL\Http\Router\Container\Factory\RouterContainerFactory;
 
-class Dispatcher extends AbstractMiddleware
+class Dispatcher implements MiddlewareInterface
 {
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParams = null
-    )
+    use MiddlewareTrait;
+
+    /**
+     * @param string $name
+     * @param RequestInterface $request
+     * @return array
+     */
+    public function dispatch(string $name, RequestInterface $request)
     {
         return [
-            'result' => $urlParams->get('urlName')
+            'result' => $name
         ];
     }
 }
 
-class PostDispatch extends AbstractMiddleware
+class Dispatcher2 implements MiddlewareInterface
 {
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParams = null
-    )
-    {
-        /**
-         * @var \LDL\Http\Router\Response\Formatter\ResponseFormatterInterface $formatter
-         */
-        $formatter = $router->getResponseFormatterRepository()->getSelectedItem();
+    use MiddlewareTrait;
 
-        $formatter->format($router->getDispatcher()->getResult(), false);
-        return ['duplicate result' => $formatter->getResult()];
-    }
-}
-
-class Dispatcher2 extends AbstractMiddleware
-{
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParameters = null
-    )
+    public function dispatch()
     {
         throw new \InvalidArgumentException('test');
     }
 }
 
-class Dispatcher3 extends AbstractMiddleware
+class Dispatcher3 implements MiddlewareInterface
 {
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParams = null
-    )
+    use MiddlewareTrait;
+
+    public function dispatch(UserCollection $users, array $dispatcherResult) : array
     {
         return [
-            'result' => $urlParams->get('urlName')
+            'result' => serialize($users),
+            'first' => $dispatcherResult
         ];
     }
 }
 
 class TestExceptionHandler extends AbstractExceptionHandler
 {
-    public function handle(
-        Router $router,
-        \Exception $e,
-        ParameterBag $urlParameters = null
-    ): ?int
+    public function handle(\Exception $e): ?int
     {
-        if(!$e instanceof InvalidArgumentException){
-            return null;
-        }
-
         return ResponseInterface::HTTP_CODE_FORBIDDEN;
-    }
-}
-
-class CustomDispatch1 extends AbstractMiddleware
-{
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $parameterBag=null
-    )
-    {
-        return ['result' => 'pre dispatch result!'];
-    }
-}
-
-class CustomDispatch2 extends AbstractMiddleware
-{
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $parameterBag=null
-    )
-    {
-        return ['result' => 'post dispatch result!'];
     }
 }
 
@@ -147,44 +90,11 @@ class ConfigParser implements RouteConfigParserInterface
     }
 }
 
-$routerExceptionHandlers = new ExceptionHandlerCollection();
-
-$routerExceptionHandlers->append(new HttpMethodNotAllowedExceptionHandler('http.method.not.allowed'))
-->append(new HttpRouteNotFoundExceptionHandler('http.route.not.found'))
-->append(new InvalidContentTypeExceptionHandler('http.invalid.content'));
-
-$configParserRepository = new RouteConfigParserRepository();
-$configParserRepository->append(new ConfigParser());
-
 $response = new Response();
 
-class RouterPreDispatch extends AbstractMiddleware
+class AgeRequestValidator extends AbstractRequestValidator
 {
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router, ParameterBag $urlParameters = null
-    )
-    {
-        return ['age' => $request->get('age')];
-    }
-}
-
-class RouterPostDispatch extends AbstractMiddleware
-{
-    public function _dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router, ParameterBag $urlParameters = null
-    )
-    {
-        return ['post global'];
-    }
-}
-
-class AgeValidator extends AbstractRequestValidator
-{
-    private const NAME = 'age.validator';
+    private const NAME = 'age.request.validator';
 
     public function __construct(?string $name=null, bool $isStrict = true)
     {
@@ -193,10 +103,10 @@ class AgeValidator extends AbstractRequestValidator
 
     public function _validate(Router $router): ?array
     {
-        $request = $router->getRequest();
+        $request = $router->getParameterSources()->getRequest();
 
         if((int) $request->get('age') < 50){
-            throw new ValidateException("Age must be greater than 50", Response::HTTP_CODE_BAD_REQUEST);
+            throw new RequestValidateException("Age must be greater than 50", Response::HTTP_CODE_BAD_REQUEST);
         }
 
         return null;
@@ -214,10 +124,10 @@ class NameLengthValidator extends AbstractRequestValidator
 
     public function _validate(Router $router): ?array
     {
-        $request = $router->getRequest();
+        $request = $router->getParameterSources()->getRequest();
 
         if(strlen($request->get('name')) < 3){
-            throw new ValidateException("Name must be larger than 3", Response::HTTP_CODE_BAD_REQUEST);
+            throw new RequestValidateException('Name must be larger than 3 characters', Response::HTTP_CODE_BAD_REQUEST);
         }
 
         return null;
@@ -228,7 +138,10 @@ class ContentTypeValidator extends AbstractRequestValidator
 {
     private const NAME = 'content-type.validator';
 
-    public function __construct(?string $name=null, bool $isStrict = true)
+    public function __construct(
+        ?string $name=null,
+        bool $isStrict = true
+    )
     {
         parent::__construct($name ?? self::NAME, $isStrict);
     }
@@ -238,56 +151,184 @@ class ContentTypeValidator extends AbstractRequestValidator
         $request = $router->getRequest();
 
         if($request->getHeaderBag()->get('Content-Type') !== 'application/json'){
-            throw new ValidateException("Invalid content type", Response::HTTP_CODE_BAD_REQUEST);
+            throw new RequestValidateException("Invalid content type", Response::HTTP_CODE_BAD_REQUEST);
         }
 
         return null;
     }
 }
 
-$chainPre = new \LDL\Http\Router\Middleware\MiddlewareChain('globalPre');
-$chainPre->append(new RouterPreDispatch('RouterPre'));
+class NameResolver implements RouteParameterResolverInterface
+{
+    private const NAME = 'name.resolver';
 
-$chainPost = new \LDL\Http\Router\Middleware\MiddlewareChain('globalPost');
-$chainPost->append(new RouterPostDispatch('RouterPost'));
+    use NameableTrait;
+
+    public function __construct(string $name = null)
+    {
+        $this->_tName = $name ?? self::NAME;
+    }
+
+    public function resolve($value) : string
+    {
+        return "Your name is: $value";
+    }
+
+}
+
+class User{
+    private $name;
+
+    public function __construct(string $name)
+    {
+        $this->name = $name;
+    }
+
+    public function getName() : string
+    {
+        return $this->name;
+    }
+}
+
+class UserCollection extends \LDL\Type\Collection\Types\Object\ObjectCollection
+{
+    public function __construct(iterable $items = null)
+    {
+        parent::__construct($items);
+
+        $this->getValueValidatorChain()
+            ->append(new \LDL\Type\Collection\Types\Object\Validator\ClassComplianceItemValidator(User::class))
+            ->lock();
+    }
+
+}
+
+class UsersResolver implements RouteParameterResolverInterface
+{
+    private const NAME = 'users.resolver';
+
+    use NameableTrait;
+
+    public function __construct(string $name = null)
+    {
+        $this->_tName = $name ?? self::NAME;
+    }
+
+    public function resolve($users) : UserCollection
+    {
+        $collection = new UserCollection();
+
+        foreach($users as $user){
+            $collection->append(new User((string) $user['id']));
+        }
+
+        return $collection;
+    }
+
+}
+
+/**
+<service id="blah" class="MiddlewareChain">
+<argument type="string">nombre_del_chain</argument>
+<argument type="collection">
+    <argument type="service" id="chain" />
+     bv
+    <argument type="service" id="chain2" />
+</argument>
+<tag name="middleware.chain">
+</service>
+
+
+class MyChain extends \LDL\Http\Router\Middleware\MiddlewareChain
+{
+
+}
+*/
+
+class AgeResolver implements RouteParameterResolverInterface
+{
+    private const NAME = 'age.resolver';
+
+    use NameableTrait;
+
+    public function __construct(string $name = null)
+    {
+        $this->_tName = $name ?? self::NAME;
+    }
+
+    public function resolve($value) : string
+    {
+        return "Years old: $value";
+    }
+}
+
+class AgeResponseValidator extends AbstractResponseValidator
+{
+    private const NAME = 'age.response.validator';
+
+    public function __construct(?string $name=null, bool $isStrict = true)
+    {
+        parent::__construct($name ?? self::NAME, $isStrict);
+    }
+
+    public function _validate(Router $router, array $result = null): ?array
+    {
+        if(null === $result){
+            return null;
+        }
+
+        if((int) $result['globalPre']['RouterPre']['age'] >= 60){
+            throw new ResponseValidateException("Age must be lower than 60", ResponseValidatorInterface::HTTP_BAD_RESPONSE);
+        }
+
+        return null;
+    }
+}
+
+$allResolvers = (new RouteParameterResolverRepository())
+    ->append(new AgeResolver())
+    ->append(new NameResolver())
+    ->append(new UsersResolver());
+
+$configParserRepository = (new RouteConfigParserRepository())
+->append(new ConfigParser());
 
 $router = new Router(
-    Request::createFromGlobals(),
-    $response,
-    $configParserRepository,
-    $routerExceptionHandlers,
-    new ResponseParserRepository(),
-    null,
-    $chainPre,
-    $chainPost
+    RouterContainerFactory::create(
+        [
+            new Dispatcher('dispatcher'),
+            new Dispatcher2('dispatcher2'),
+            new Dispatcher3('dispatcher3'),
+        ],
+        $allResolvers,
+        $configParserRepository
+    )
 );
 
-//$router->getValidatorChain()->append(new ContentTypeValidator());
-
-$requestValidatorsRepository = new RequestValidatorChain();
-$requestValidatorsRepository->append(new AgeValidator())
-->append(new ContentTypeValidator())
-->append(new NameLengthValidator());
-
-$dispatcherRepository = new DispatcherRepository();
-$dispatcherRepository->append(new Dispatcher('dispatcher'))
-    ->append(new Dispatcher2('dispatcher2'))
-    ->append(new Dispatcher3('dispatcher3'))
-    ->append(new PostDispatch('post.dispatch'));
-
-$routeExceptionHandlers = new ExceptionHandlerCollection();
-$routeExceptionHandlers->append(new TestExceptionHandler('test.exception.handler'));
+$router->getRequestValidatorChain()
+    ->append(new ContentTypeValidator())
+    ->append(new AgeRequestValidator())
+    ->append(new NameLengthValidator());
 
 $routes = RouteFactory::fromJsonFile(
     './routes.json',
-    $router,
-    $requestValidatorsRepository,
-    $dispatcherRepository,
-    $routeExceptionHandlers
+    $router
 );
 
 $group = new RouteGroup('Test Group', 'test', $routes);
 
 $router->addGroup($group);
+
+/** Event subscription example
+
+$router->getEventBus()->subscribeTo('route.main.dispatcher.before', static function($result){
+    dd($result);
+});
+
+$router->getEventBus()->subscribeTo('route.main.dispatcher.after', static function($result){
+    dd($result);
+});
+*/
+
 
 $router->dispatch()->send();

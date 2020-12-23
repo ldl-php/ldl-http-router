@@ -2,11 +2,14 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
+use LDL\Framework\Base\Traits\NameableTrait;
 use LDL\Framework\Base\Traits\PriorityInterfaceTrait;
+use LDL\Type\Collection\Types\Classes\ClassCollection;
 
 abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
 {
     use PriorityInterfaceTrait;
+    use NameableTrait;
 
     public const DEFAULT_PRIORITY = 1;
 
@@ -15,10 +18,24 @@ abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
      */
     private $name;
 
-    public function __construct(string $name, int $priority=self::DEFAULT_PRIORITY)
+    /**
+     * @var ClassCollection
+     */
+    protected $handledExceptions;
+
+    public function __construct(
+        string $name,
+        ?int $priority=null
+    )
     {
-        $this->name = $name;
-        $this->_tPriority = $priority;
+        $this->_tName = $name;
+        $this->_tPriority = $priority ?? self::DEFAULT_PRIORITY;
+        $this->handledExceptions = new ClassCollection();
+    }
+
+    public function getHandledExceptions(): ClassCollection
+    {
+        return $this->handledExceptions;
     }
 
     /**
@@ -31,11 +48,8 @@ abstract class AbstractExceptionHandler implements ExceptionHandlerInterface
         return $self;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getName(): string
+    public function canHandle(string $exceptionClass): bool
     {
-        return $this->name;
+        return $this->getHandledExceptions()->hasValue($exceptionClass);
     }
 }

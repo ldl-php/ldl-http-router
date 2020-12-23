@@ -10,13 +10,19 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 
 class InvalidContentTypeExceptionHandler extends AbstractExceptionHandler
 {
+    private const NAME = 'http.content.invalid';
 
-    public function handle(
-        Router $router,
-        \Exception $e,
-        ParameterBag $urlParameters=null
-    ): ?int
+    public function __construct(int $priority = self::DEFAULT_PRIORITY, string $name = self::NAME)
     {
-        return $e instanceof InvalidContentTypeException ? ResponseInterface::HTTP_CODE_METHOD_NOT_ALLOWED : null;
+        parent::__construct($name, $priority);
+
+        $this->handledExceptions
+            ->append(InvalidContentTypeException::class)
+            ->lock();
+    }
+
+    public function handle(\Exception $e): ?int
+    {
+        return ResponseInterface::HTTP_CODE_BAD_REQUEST;
     }
 }

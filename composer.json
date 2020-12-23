@@ -9,7 +9,8 @@
         "ldl-framework/http-core": "dev-master",
         "ldl-framework/typed-collection": "dev-master",
         "ldl-framework/file-common": "dev-master",
-        "symfony/string": "^5.1"
+        "symfony/string": "^5.1",
+        "league/event": "^3.0"
     },
     "license": "MIT",
     "authors": [

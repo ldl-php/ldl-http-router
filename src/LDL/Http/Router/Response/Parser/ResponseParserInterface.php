@@ -45,6 +45,6 @@ interface ResponseParserInterface
      */
     public function parse(
         Router $router,
-        ?array $data
+        $data
     ) : void;
 }

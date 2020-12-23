@@ -11,17 +11,24 @@ use Symfony\Component\HttpFoundation\ParameterBag;
 
 class HttpRouteNotFoundExceptionHandler extends AbstractExceptionHandler implements ModifiesResponseInterface
 {
+    private const NAME = 'http.route.not_found';
+
+    public function __construct(int $priority = self::DEFAULT_PRIORITY, string $name=self::NAME)
+    {
+        parent::__construct($name, $priority);
+
+        $this->handledExceptions
+            ->append(HttpRouteNotFoundException::class)
+            ->lock();
+    }
+
     public function getContent(): ?array
     {
         return null;
     }
 
-    public function handle(
-        Router $router,
-        \Exception $e,
-        ParameterBag $urlParameters=null
-    ) : ?int
+    public function handle(\Exception $e) : ?int
     {
-        return $e instanceof HttpRouteNotFoundException ? ResponseInterface::HTTP_CODE_NOT_FOUND : null;
+        return ResponseInterface::HTTP_CODE_NOT_FOUND;
     }
 }

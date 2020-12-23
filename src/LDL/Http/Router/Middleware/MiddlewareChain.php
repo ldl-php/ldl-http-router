@@ -3,34 +3,34 @@
 namespace LDL\Http\Router\Middleware;
 
 use LDL\Framework\Base\Exception\LockingException;
-use LDL\Framework\Base\Traits\NamespaceInterfaceTrait;
-use LDL\Http\Core\Request\RequestInterface;
-use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Dispatcher\StaticDispatcherInterface;
-use LDL\Http\Router\Route\Validator\Exception\ValidationPartialException;
-use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
-use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
-use LDL\Http\Router\Router;
+use LDL\Http\Router\Handler\Exception\Repository\ExceptionHandlerRepositoryInterface;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultItem;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepositoryInterface;
+use LDL\Http\Router\Middleware\Dispatcher\MiddlewareDispatcherInterface;
+use LDL\Http\Router\Route\Parameter\RouteParameterInterface;
+use LDL\Http\Router\Route\Parameter\RouteParameters;
+use LDL\Http\Router\Container\RouterContainerInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Traits\Filter\FilterByActiveStateTrait;
 use LDL\Type\Collection\Traits\Filter\FilterByInterfaceTrait;
+use LDL\Type\Collection\Traits\Selection\MultipleSelectionTrait;
 use LDL\Type\Collection\Traits\Sorting\PrioritySortingTrait;
 use LDL\Type\Collection\Traits\Validator\KeyValidatorChainTrait;
 use LDL\Type\Collection\Traits\Validator\ValueValidatorChainTrait;
 use LDL\Type\Collection\Types\Object\ObjectCollection;
 use LDL\Type\Collection\Types\Object\Validator\InterfaceComplianceItemValidator;
+use LDL\Type\Collection\Types\String\StringCollection;
 use LDL\Type\Collection\Validator\UniqueValidator;
-use Symfony\Component\HttpFoundation\ParameterBag;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
 class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterface
 {
     use KeyValidatorChainTrait;
-    use NamespaceInterfaceTrait;
     use ValueValidatorChainTrait;
     use PrioritySortingTrait;
     use FilterByInterfaceTrait;
     use FilterByActiveStateTrait;
-    use RequestValidatorChainTrait;
+    use MultipleSelectionTrait;
 
     /**
      * @var string
@@ -78,7 +78,8 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         $this->isActive = $isActive;
 
         $this->getValueValidatorChain()
-            ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class))
+            ->append(new InterfaceComplianceItemValidator(MiddlewareInterface::class, false))
+            ->append(new InterfaceComplianceItemValidator(MiddlewareChainInterface::class, false))
             ->lock();
 
         $this->getKeyValidatorChain()
@@ -136,7 +137,7 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     public function getLastExecutedDispatcher() : MiddlewareInterface
     {
         if(false === $this->isDispatched){
-            $msg = 'You can not the last executed dispatcher of an "undispatched" middleware chain';
+            $msg = 'You can not obtain the last executed dispatcher of an "undispatched" middleware chain';
             throw new Exception\UndispatchedMiddlewareException($msg);
         }
 
@@ -146,13 +147,12 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
     /**
      * @param MiddlewareInterface $item
      * @param null $key
-     * @return CollectionInterface
+     * @return MiddlewareChainInterface
      * @throws \Exception
      */
     public function append($item, $key = null): CollectionInterface
     {
-        $priority = $item->getPriority();
-        return parent::append($item, $priority ?? count($this) + 1);
+        return parent::append($item, $item->getName());
     }
 
     public function getLastException() : ?\Exception
@@ -160,138 +160,129 @@ class MiddlewareChain extends ObjectCollection implements MiddlewareChainInterfa
         return $this->lastException;
     }
 
+    public function getRequiredParameters(): StringCollection
+    {
+        return new StringCollection();
+    }
+
     /**
      * {@inheritdoc}
      */
     public function dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParameters=null
-    ) : void
+        string $context,
+        EventDispatcherInterface $events,
+        RouterContainerInterface $sources,
+        MiddlewareConfigRepositoryInterface $configRepository,
+        ExceptionHandlerRepositoryInterface $exceptionHandlers
+    ) : MiddlewareChainInterface
     {
-        $this->result = null;
         $this->isDispatched = true;
 
-        $this->getValidatorChain()->validate($router);
-        $partialExceptions = $this->getValidatorChain()->getPartialExceptions();
-
-        foreach($partialExceptions as $name => $message){
-            $this->appendToResult($message, $name);
-        }
-
         /**
-         * @var MiddlewareInterface $dispatch
+         * @var MiddlewareInterface|MiddlewareDispatcherInterface $dispatch
          */
         foreach ($this as $dispatch) {
             if(false === $dispatch->isActive()){
                 continue;
             }
 
-            try {
-                $this->lastExecuted = $dispatch;
+            $this->lastExecuted = $dispatch;
 
+            /**
+             * There could be two possible situations, the dispatcher is a simple regular dispatcher
+             * or a collection of dispatchers.
+             */
+            if($dispatch instanceof MiddlewareChainInterface){
                 $dispatch->dispatch(
-                    $request,
-                    $response,
-                    $router,
-                    $urlParameters
+                    $context,
+                    $events,
+                    $sources,
+                    $configRepository,
+                    $exceptionHandlers,
+                    $events
                 );
 
-                $result = $dispatch instanceof StaticDispatcherInterface ? $dispatch->getStaticResult() : $dispatch->getResult();
+                continue;
+            }
 
-                if (null !== $result) {
-                    $this->appendToResult($result, $dispatch->getName());
+            $dispatcherConfig = $configRepository->get($dispatch->getName());
+
+            $context = sprintf(
+                '%s%s.%s',
+                $this->name ?? '',
+                $context,
+                $dispatcherConfig->getName()
+            );
+
+            $pass = [];
+
+            /**
+             * @var RouteParameterInterface $param
+             */
+            foreach(RouteParameters::create($dispatcherConfig->getParameters()) as $param){
+                /**
+                 * Obtain parameters from the sources configured in the dispatcher configuration
+                 */
+                if($param->getResolver()) {
+                    $pass[] = $sources->getResolved(
+                        $param->getSource(),
+                        $param->getResolver(),
+                        $param->getName()
+                    );
+
+                    continue;
                 }
 
-                $httpStatusCode = $response->getStatusCode();
+                $pass[] = $sources->get($param->getSource(), $param->getName());
+            }
 
-                if ($httpStatusCode !== ResponseInterface::HTTP_CODE_OK) {
-                    break;
-                }
+            $events->dispatch(
+                new Event\MiddlewareDispatchBeforeEvent(
+                    sprintf('%s.%s',$context, 'before'),
+                    $dispatch,
+                    $dispatcherConfig,
+                    $pass
+                )
+            );
+
+            try {
+
+                $return = count($pass) > 0 ? $dispatch->dispatch(...$pass) : $dispatch->dispatch();
+
             }catch(\Exception $e){
-                $result = $dispatch instanceof StaticDispatcherInterface ? $dispatch->getStaticResult() : $dispatch->getResult();
 
-                if (null !== $result) {
-                    $this->appendToResult($result, $dispatch->getName());
+                if($dispatcherConfig->isBlocking()){
+                    throw $e;
                 }
 
-                $this->parseException($router, $e);
-
-                $this->lastException = $e;
-
-                //throw $e;
+                $return = $dispatcherConfig->isPartOfResponse() ? $exceptionHandlers->handle($e) : null;
             }
 
-        }
-    }
+            /**
+             * if it's not part of the response then continue
+             */
+            if(false === $dispatcherConfig->isPartOfResponse()) {
+                continue;
+            }
 
-    private function appendToResult($data, string $name = null) : void
-    {
-        if(null === $this->result){
-            $this->result = [];
-        }
-
-        if(null === $name){
-            $this->result[] = $data;
-            return;
-        }
-
-        $this->result[$name] = $data;
-    }
-
-
-    private function parseException(
-        Router $router,
-        \Exception $e
-    ) : void
-    {
-        $lastExecutedDispatcher = $this->lastExecuted;
-        $resultKey = $lastExecutedDispatcher->getName();
-        $route = $router->getCurrentRoute();
-        $routerHandlers = $router->getExceptionHandlers();
-
-        if(null === $route){
-            $exception = $routerHandlers->handle(
-                $router,
-                $e,
-                $router->getDispatcher()->getUrlParameters(),
+            $resultItem = new MiddlewareChainResultItem(
+                $context,
+                $dispatch,
+                $dispatcherConfig,
+                $return
             );
 
-            if(null !== $exception) {
-                $this->appendToResult($exception, $resultKey);
-            }
-
-            return;
-        }
-
-        try{
-
-            $handlers = $route->getExceptionHandlers();
-
-            $exception = $handlers->handle(
-                $router,
-                $e,
-                $router->getDispatcher()->getUrlParameters(),
+            $events->dispatch(
+                new Event\MiddlewareDispatchAfterEvent(
+                    sprintf('%s.%s',$context, 'after'),
+                    $resultItem
+                )
             );
 
-            if(null !== $exception) {
-                $this->appendToResult($exception, $resultKey);
-            }
-
-        }catch (\Exception $e){
-            $exception = $routerHandlers->handle(
-                $router,
-                $e,
-                $router->getDispatcher()->getUrlParameters(),
-            );
-
-            if(null !== $exception){
-                $this->appendToResult($exception, $resultKey);
-            }
-
+            $sources->getResponseResult()->append($resultItem, $context);
         }
 
+        return $this;
     }
 
     /**

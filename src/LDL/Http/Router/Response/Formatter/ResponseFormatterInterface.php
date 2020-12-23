@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Response\Formatter;
 
-use LDL\Http\Router\Middleware\MiddlewareChainCollection;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultInterface;
 
 interface ResponseFormatterInterface
 {
@@ -36,13 +36,13 @@ interface ResponseFormatterInterface
     /**
      * Parse all the results returned by the RouterDispatcher
      *
-     * @param MiddlewareChainCollection $collection
+     * @param MiddlewareChainResultInterface $result
      * @param bool $setFormatted
      *
-     * @return void
+     * @return ResponseFormatterInterface
      */
     public function format(
-        MiddlewareChainCollection $collection,
+        MiddlewareChainResultInterface $result,
         bool $setFormatted = false
-    ) : void;
+    ) : ResponseFormatterInterface;
 }

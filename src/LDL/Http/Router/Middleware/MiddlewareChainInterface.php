@@ -6,13 +6,22 @@
 
 namespace LDL\Http\Router\Middleware;
 
+use LDL\Framework\Base\Contracts\IsActiveInterface;
+use LDL\Framework\Base\Contracts\LockableObjectInterface;
+use LDL\Http\Router\Handler\Exception\Repository\ExceptionHandlerRepositoryInterface;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultInterface;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepositoryInterface;
+use LDL\Http\Router\Route\Parameter\Resolver\RouteParameterResolverRepositoryInterface;
+use LDL\Http\Router\Container\RouterContainerInterface;
 use LDL\Type\Collection\Interfaces\CollectionInterface;
 use LDL\Type\Collection\Interfaces\Filter\FilterByActiveStateInterface;
+use LDL\Type\Collection\Interfaces\Selection\MultipleSelectionInterface;
 use LDL\Type\Collection\Interfaces\Sorting\PrioritySortingInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasKeyValidatorChainInterface;
 use LDL\Type\Collection\Interfaces\Validation\HasValueValidatorChainInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
-interface MiddlewareChainInterface extends CollectionInterface, HasValueValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface, MiddlewareInterface
+interface MiddlewareChainInterface extends CollectionInterface, HasValueValidatorChainInterface, PrioritySortingInterface, FilterByActiveStateInterface, HasKeyValidatorChainInterface,  MultipleSelectionInterface, IsActiveInterface, LockableObjectInterface
 {
     /**
      * Obtains the last executed dispatcher in the middleware chain
@@ -36,4 +45,19 @@ interface MiddlewareChainInterface extends CollectionInterface, HasValueValidato
      */
     public function getLastException() : ?\Exception;
 
+    /**
+     * @param string $context
+     * @param EventDispatcherInterface $events
+     * @param RouterContainerInterface $sources
+     * @param MiddlewareConfigRepositoryInterface $configRepository
+     * @param ExceptionHandlerRepositoryInterface $exceptionHandlers
+     * @return MiddlewareChainInterface
+     */
+    public function dispatch(
+        string $context,
+        EventDispatcherInterface $events,
+        RouterContainerInterface $sources,
+        MiddlewareConfigRepositoryInterface $configRepository,
+        ExceptionHandlerRepositoryInterface $exceptionHandlers
+    ) : MiddlewareChainInterface;
 }

@@ -3,6 +3,9 @@
 namespace LDL\Http\Router\Route\Config;
 
 use LDL\Http\Core\Request\Helper\RequestHelper;
+use LDL\Http\Core\Response\ResponseInterface;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepositoryInterface;
+use LDL\Type\Collection\Types\String\StringCollection;
 use Symfony\Component\String\UnicodeString;
 
 class RouteConfig implements \JsonSerializable
@@ -53,6 +56,46 @@ class RouteConfig implements \JsonSerializable
     private $responseFormatterOptions;
 
     /**
+     * @var StringCollection
+     */
+    private $requestValidators;
+
+    /**
+     * @var ?string
+     */
+    private $requestParser;
+
+    /**
+     * @var StringCollection
+     */
+    private $responseValidators;
+
+    /**
+     * @var StringCollection
+     */
+    private $requestConfigurators;
+
+    /**
+     * @var MiddlewareConfigRepositoryInterface
+     */
+    private $preDispatchers;
+
+    /**
+     * @var MiddlewareConfigRepositoryInterface
+     */
+    private $dispatchers;
+
+    /**
+     * @var MiddlewareConfigRepositoryInterface
+     */
+    private $postDispatchers;
+
+    /**
+     * @var StringCollection
+     */
+    private $exceptionHandlerList;
+
+    /**
      * @var array
      */
     private $rawConfig;
@@ -62,12 +105,26 @@ class RouteConfig implements \JsonSerializable
      */
     private $file;
 
+    /**
+     * @var int
+     */
+    private $responseSuccess;
+
     public function __construct(
         string $method,
         string $version,
         string $prefix,
         string $name,
         string $description,
+        MiddlewareConfigRepositoryInterface $preDispatchers,
+        MiddlewareConfigRepositoryInterface $dispatchers,
+        MiddlewareConfigRepositoryInterface $postDispatchers,
+        StringCollection $requestValidators,
+        StringCollection $responseValidators,
+        StringCollection $requestConfigurators,
+        StringCollection $exceptionHandlerList,
+        ?int $responseSuccess,
+        ?string $requestParser,
         ?string $responseParser,
         ?array $responseParserOptions,
         ?string $responseFormatter,
@@ -76,15 +133,25 @@ class RouteConfig implements \JsonSerializable
         string $file = null
     )
     {
+
         $this->setPrefix($prefix)
             ->setName($name)
             ->setVersion($version)
             ->setRequestMethod($method)
+            ->setPreDispatchers($preDispatchers)
+            ->setDispatchers($dispatchers)
+            ->setPostDispatchers($postDispatchers)
             ->setResponseParser($responseParser)
             ->setResponseParserOptions($responseParserOptions)
             ->setResponseFormatter($responseFormatter)
             ->setResponseFormatterOptions($responseFormatterOptions)
             ->setDescription($description)
+            ->setRequestValidators($requestValidators)
+            ->setResponseValidators($responseValidators)
+            ->setRequestConfigurators($requestConfigurators)
+            ->setResponseSuccess($responseSuccess ?? ResponseInterface::HTTP_CODE_OK)
+            ->setExceptionHandlers($exceptionHandlerList)
+            ->setRequestParser($requestParser)
             ->setRawConfig($rawConfig ?? [])
             ->setFile($file);
     }
@@ -173,12 +240,64 @@ class RouteConfig implements \JsonSerializable
         return $this->file;
     }
 
+    public function getRequestValidators() : StringCollection
+    {
+        return $this->requestValidators;
+    }
+
+    public function getResponseValidators() : StringCollection
+    {
+        return $this->responseValidators;
+    }
+
+    public function getRequestConfigurators() : StringCollection
+    {
+        return $this->requestConfigurators;
+    }
+
+    public function getPreDispatchers() : MiddlewareConfigRepositoryInterface
+    {
+        return $this->preDispatchers;
+    }
+
+    public function getDispatchers() : MiddlewareConfigRepositoryInterface
+    {
+        return $this->dispatchers;
+    }
+
+    public function getPostDispatchers() : MiddlewareConfigRepositoryInterface
+    {
+        return $this->postDispatchers;
+    }
+
+    public function getExceptionHandlerList() : StringCollection
+    {
+        return $this->exceptionHandlerList;
+    }
+
     public function getRawConfig() : array
     {
         return $this->rawConfig;
     }
 
+    public function getRequestParser() : ?string
+    {
+        return $this->requestParser;
+    }
+
+
+    public function getResponseSuccessCode() : int
+    {
+        return $this->responseSuccess;
+    }
+
     //<editor-fold desc="Private methods">
+
+    private function setRequestParser(?string $parser) : self
+    {
+        $this->requestParser = $parser;
+        return $this;
+    }
 
     private function setFile(string $file) : self
     {
@@ -286,6 +405,54 @@ class RouteConfig implements \JsonSerializable
         );
 
         throw new Exception\InvalidHttpMethodException($msg);
+    }
+
+    private function setRequestValidators(StringCollection $validators) : self
+    {
+        $this->requestValidators = $validators;
+        return $this;
+    }
+
+    private function setResponseValidators(StringCollection $validators) : self
+    {
+        $this->responseValidators = $validators;
+        return $this;
+    }
+
+    private function setRequestConfigurators(StringCollection $configurators) : self
+    {
+        $this->requestConfigurators = $configurators;
+        return $this;
+    }
+
+    private function setPreDispatchers(MiddlewareConfigRepositoryInterface $preDispatchers) : self
+    {
+        $this->preDispatchers = $preDispatchers;
+        return $this;
+    }
+
+    private function setDispatchers(MiddlewareConfigRepositoryInterface $dispatchers) : self
+    {
+        $this->dispatchers = $dispatchers;
+        return $this;
+    }
+
+    private function setPostDispatchers(MiddlewareConfigRepositoryInterface $postDispatchers) : self
+    {
+        $this->postDispatchers = $postDispatchers;
+        return $this;
+    }
+
+    private function setExceptionHandlers(StringCollection $handlers) : self
+    {
+        $this->exceptionHandlerList = $handlers;
+        return $this;
+    }
+
+    private function setResponseSuccess(int $code) : self
+    {
+        $this->responseSuccess = $code;
+        return $this;
     }
 
     //</editor-fold>

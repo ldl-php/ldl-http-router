@@ -2,26 +2,27 @@
 
 namespace LDL\Http\Router\Handler\Exception;
 
+use LDL\Framework\Base\Contracts\NameableInterface;
 use LDL\Http\Router\Router;
-use Symfony\Component\HttpFoundation\ParameterBag;
+use LDL\Type\Collection\Types\Classes\ClassCollection;
 
-interface ExceptionHandlerInterface
+interface ExceptionHandlerInterface extends NameableInterface
 {
     /**
-     * @return string
+     * @param string $exceptionClass
+     * @return bool
      */
-    public function getName() : string;
+    public function canHandle(string $exceptionClass) : bool;
 
     /**
-     * @param Router $router
+     * @return ClassCollection
+     */
+    public function getHandledExceptions(): ClassCollection;
+
+    /**
      * @param \Exception $e
-     * @param ParameterBag $urlParameters
      *
      * @return int|null
      */
-    public function handle(
-        Router $router,
-        \Exception $e,
-        ParameterBag $urlParameters=null
-    ) : ?int;
+    public function handle(\Exception $e) : ?int;
 }

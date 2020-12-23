@@ -44,11 +44,11 @@ class JsonResponseParser extends AbstractResponseParser
 
     public function _parse(
         Router $router,
-        ?array $data
+        $data
     ) : ?string
     {
         if(null === $data){
-            return null;
+            return '';
         }
 
         $defaults = [

@@ -2,8 +2,8 @@
 
 namespace LDL\Http\Router\Response\Formatter;
 
-use LDL\Http\Router\Middleware\MiddlewareChainCollection;
-use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultInterface;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultItemInterface;
 
 class ResponseFormatter extends AbstractResponseFormatter
 {
@@ -14,27 +14,27 @@ class ResponseFormatter extends AbstractResponseFormatter
         parent::__construct($name ?? self::NAME, $options);
     }
 
-    public function _format(MiddlewareChainCollection $collections) : ?array
+    public function _format(MiddlewareChainResultInterface $result) : ?array
     {
-        $result = [];
+        $data = [];
 
         /**
-         * @var MiddlewareChainInterface $chain
+         * @var MiddlewareChainResultItemInterface $item
          */
-        foreach($collections as $chain){
+        foreach($result as $item){
+            $dispatcher = $item->getDispatcher();
+            $dispatcherConfig = $dispatcher->getConfig();
+            $dispatcherResult = $item->getResult();
 
-            $chainResult = $chain->getResult();
-
-            if(null !== $chainResult) {
-                $chainName = $chain->getName();
-                $result[] = null === $chainName ? $chainResult : [$chainName => $chainResult];
+            if(null !== $dispatcherResult && $dispatcherConfig->isPartOfResponse()) {
+                $data[] = [$dispatcherConfig->getName() => $dispatcherResult];
             }
 
         }
 
         $return = [];
 
-        foreach($result as $item){
+        foreach($data as $item){
             foreach($item as $key => $value) {
                 if(array_key_exists($key, $return)){
                     $return[$key] = [

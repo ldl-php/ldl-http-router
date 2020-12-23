@@ -5,38 +5,15 @@ namespace LDL\Http\Router\Middleware;
 use LDL\Framework\Base\Contracts\IsActiveInterface;
 
 use LDL\Framework\Base\Contracts\LockableObjectInterface;
-use LDL\Http\Core\Request\RequestInterface;
-use LDL\Http\Core\Response\ResponseInterface;
-use LDL\Http\Router\Route\Validator\HasValidatorChainInterface;
-use LDL\Http\Router\Router;
+use LDL\Http\Router\Validator\Request\HasValidatorChainInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 interface MiddlewareInterface extends IsActiveInterface, LockableObjectInterface, HasValidatorChainInterface
 {
     /**
-     * @param RequestInterface $request
-     * @param ResponseInterface $response
-     * @param ParameterBag $urlParameters
-     * @param Router $router
-     *
-     * @return void
-     */
-    public function dispatch(
-        RequestInterface $request,
-        ResponseInterface $response,
-        Router $router,
-        ParameterBag $urlParameters=null
-    ) : void;
-
-    /**
      * @return string
      */
     public function getName() : ?string;
-
-    /**
-     * @return array
-     */
-    public function getResult();
 
     /**
      * @return int|null
@@ -61,4 +38,10 @@ interface MiddlewareInterface extends IsActiveInterface, LockableObjectInterface
      */
     public function isDispatched() : bool;
 
+    /**
+     * Returns the dispatcher configuration
+     *
+     * @return Config\MiddlewareConfigInterface
+     */
+    public function getConfig() : Config\MiddlewareConfigInterface;
 }

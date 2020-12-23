@@ -3,16 +3,14 @@
 namespace LDL\Http\Router\Route\Factory;
 
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollectionInterface;
-use LDL\Http\Router\Middleware\DispatcherRepository;
-use LDL\Http\Router\Middleware\MiddlewareChain;
-use LDL\Http\Router\Middleware\MiddlewareChainInterface;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfig;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepository;
+use LDL\Http\Router\Middleware\Config\MiddlewareConfigRepositoryInterface;
 use LDL\Http\Router\Route\Config\RouteConfig;
 use LDL\Http\Router\Route\Group\RouteCollection;
 use LDL\Http\Router\Route\Route;
-use LDL\Http\Router\Route\Validator\RequestValidatorChain;
 use LDL\Http\Router\Router;
+use LDL\Type\Collection\Types\String\StringCollection;
 
 class RouteFactory
 {
@@ -21,10 +19,7 @@ class RouteFactory
 
     public static function fromJsonFile(
         string $file,
-        Router $router,
-        RequestValidatorChain $requestValidators = null,
-        DispatcherRepository $dispatcherRepository = null,
-        ExceptionHandlerCollection $routeExceptionHandlers = null
+        Router $router
     ): RouteCollection
     {
         if (!file_exists($file)) {
@@ -43,19 +38,13 @@ class RouteFactory
 
         return self::fromJson(
             file_get_contents($file),
-            $router,
-            $requestValidators,
-            $dispatcherRepository,
-            $routeExceptionHandlers
+            $router
         );
     }
 
     public static function fromJson(
         string $json,
-        Router $router,
-        RequestValidatorChain $requestValidators = null,
-        DispatcherRepository $dispatcherRepository = null,
-        ExceptionHandlerCollection $routeExceptionHandlers = null
+        Router $router
     ): RouteCollection {
         try {
             return self::fromArray(
@@ -65,10 +54,7 @@ class RouteFactory
                     2048,
                     \JSON_THROW_ON_ERROR
                 ),
-                $router,
-                $requestValidators,
-                $dispatcherRepository,
-                $routeExceptionHandlers
+                $router
             );
         } catch (\Exception $e) {
             throw new Exception\JsonParseException(self::exceptionMessage([$e->getMessage()]));
@@ -77,10 +63,7 @@ class RouteFactory
 
     public static function fromArray(
         array $data,
-        Router $router,
-        RequestValidatorChain $requestValidators = null,
-        DispatcherRepository $dispatcherRepository = null,
-        ExceptionHandlerCollection $routeExceptionHandlers = null
+        Router $router
     ): RouteCollection {
         $collection = new RouteCollection();
 
@@ -108,6 +91,15 @@ class RouteFactory
                 self::getUrlPrefix($route),
                 array_key_exists('name', $route) ? $route['name'] : '',
                 array_key_exists('description', $route) ? $route['description'] : '',
+                self::getMiddleware($route, 'preDispatch'),
+                self::getMiddleware($route, 'dispatchers'),
+                self::getMiddleware($route, 'postDispatch'),
+                self::getRequestValidators($route),
+                self::getResponseValidators($route),
+                self::getRequestConfigurators($route),
+                self::getExceptionHandlers($route),
+                self::getResponseStatusCode($route),
+                self::getRequestBodyParser($route),
                 self::getResponseParser($route, $router),
                 self::getResponseParserOptions($route),
                 self::getResponseFormatter($route),
@@ -116,33 +108,100 @@ class RouteFactory
                 self::$file
             );
 
-            $collection->append(new Route(
-                $router,
-                $config,
-                self::getMiddleware(
-                    $route,
-                    'preDispatch',
-                    $requestValidators,
-                    $dispatcherRepository
-                ),
-                self::getMiddleware(
-                    $route,
-                    'dispatchers',
-                    $requestValidators,
-                    $dispatcherRepository
-                ),
-                self::getMiddleware(
-                    $route,
-                    'postDispatch',
-                    $requestValidators,
-                    $dispatcherRepository
-                ),
-                self::getHandlerExceptionParser($route, $routeExceptionHandlers)
-            ));
+            $collection->append(new Route($router, $config));
 
         }
 
         return $collection;
+    }
+
+    private static function getRequestBodyParser(array $route) : ?string
+    {
+        if(isset($route['request']['body']['parser']) && is_string($route['request']['body']['parser'])){
+            return $route['request']['body']['parser'];
+        }
+
+        return null;
+    }
+
+    private static function getResponseStatusCode(array $route) : ?int
+    {
+        if(isset($route['response']['success']) && is_int($route['response']['success'])){
+            return $route['response']['success'];
+        }
+
+        return null;
+    }
+
+    private static function getRequestValidators(array $route) : StringCollection
+    {
+        $collection = new StringCollection();
+
+        if(false === array_key_exists('request', $route)){
+            return $collection;
+        }
+
+        if(false === array_key_exists('validators', $route['request'])){
+            return $collection;
+        }
+
+        if(false === array_key_exists('list', $route['request']['validators'])){
+            return $collection;
+        }
+
+        if(!is_array($route['request']['validators']['list'])){
+            return $collection;
+        }
+
+        return $collection->appendMany($route['request']['validators']['list']);
+    }
+
+    private static function getResponseValidators(array $route) : StringCollection
+    {
+        $collection = new StringCollection();
+
+        if(false === array_key_exists('response', $route)){
+            return $collection;
+        }
+
+        if(false === array_key_exists('validators', $route['response'])){
+            return $collection;
+        }
+
+        if(false === array_key_exists('list', $route['response']['validators'])){
+            return $collection;
+        }
+
+
+        if(!is_array($route['response']['validators']['list'])){
+            return $collection;
+        }
+
+        return $collection->appendMany($route['response']['validators']['list']);
+    }
+
+    private static function getRequestConfigurators(array $route) : StringCollection
+    {
+        $collection = new StringCollection();
+
+        if(false === array_key_exists('request', $route)){
+            return $collection;
+        }
+
+        if(false === array_key_exists('configurators', $route['request'])){
+            return $collection;
+        }
+
+
+        if(false === array_key_exists('list', $route['request']['configurators'])){
+            return $collection;
+        }
+
+        if(!is_array($route['request']['configurators']['list'])){
+            return $collection;
+        }
+
+        return $collection->appendMany($route['request']['configurators']['list']);
     }
 
     private static function getResponseParser(array $route, Router $router) : ?string
@@ -270,109 +329,36 @@ class RouteFactory
 
     private static function getMiddleware(
         array $route,
-        string $middlewareType,
-        RequestValidatorChain $requestValidators = null,
-        DispatcherRepository $dispatcherRepository = null
-    ): ?MiddlewareChainInterface
+        string $middlewareType
+    ): MiddlewareConfigRepositoryInterface
     {
+        $collection = new MiddlewareConfigRepository();
+
         if(!array_key_exists('middleware', $route)){
-            return null;
+            return $collection;
         }
 
         if (!array_key_exists($middlewareType, $route['middleware'])) {
-            return null;
+            return $collection;
         }
 
-        if(null === $dispatcherRepository){
-            throw new \LogicException('No middleware chain was given');
+        if(!array_key_exists('list', $route['middleware'][$middlewareType])){
+            return $collection;
         }
 
-        $list = $route['middleware'][$middlewareType];
-
-        if(!is_array($list)){
-            $list = [ 'list' => [$list]];
+        foreach($route['middleware'][$middlewareType]['list'] as $middleware){
+            $collection->append(
+                new MiddlewareConfig(
+                    $middleware['name'],
+                    array_key_exists('parameters', $middleware) ? $middleware['parameters'] : [],
+                    array_key_exists('store', $middleware) ? $middleware['store'] : true,
+                    array_key_exists('response', $middleware) ? $middleware['response'] : true,
+                    array_key_exists('block', $middleware) ? $middleware['block'] : true
+                )
+            );
         }
 
-        $chain = new MiddlewareChain(array_key_exists('name', $list) ? $list['name'] : null);
-
-        if(!array_key_exists('list', $list)){
-            return $chain;
-        }
-
-        self::parseDispatchers($list['list'], $chain, $dispatcherRepository, $requestValidators);
-
-        return $chain;
-    }
-
-    private static function parseDispatchers(
-        array $list,
-        MiddlewareChainInterface $chain,
-        DispatcherRepository $dispatcherRepository,
-        RequestValidatorChain $requestValidators = null
-    ) : void
-    {
-        foreach ($list as $key => $values) {
-            if($key === 'dispatchers'){
-                foreach($values as $item){
-                    $chain->append($dispatcherRepository->offsetGet($item['dispatcher']));
-
-                    if(false === array_key_exists('validators', $item)){
-                        continue;
-                    }
-
-                    $validators = $item['validators'];
-
-                    if(count($validators) === 0){
-                        continue;
-                    }
-
-                    if(false === is_array($validators)){
-                        $validators = [
-                            'list' => [
-                                ['name' => $validators]
-                            ]
-                        ];
-                    }
-
-                    if(null === $requestValidators){
-                        throw new \LogicException('No request validator chain was given');
-                    }
-
-                    $defaultStrict = array_key_exists('strict', $validators) ? (bool) $validators['strict'] : true;
-
-                    foreach($validators['list'] as $validator){
-
-                        if(false === array_key_exists('name', $validator)){
-                            continue;
-                        }
-
-                        $strict = array_key_exists('strict', $validator) ? (bool) $validator['strict'] : $defaultStrict;
-
-                        $offsetValidator = $requestValidators->offsetGet($validator['name']);
-
-                        $chain->getValidatorChain()->append($offsetValidator->getNewInstance($strict));
-                    }
-                }
-                continue;
-            }
-
-            $isGroup = is_array($values);
-
-            if($isGroup){
-
-                if(is_int($key)){
-                    self::parseDispatchers($values, $chain, $dispatcherRepository, $requestValidators);
-                    continue;
-                }
-
-                $group = new MiddlewareChain($key);
-                self::parseDispatchers($values, $group, $dispatcherRepository, $requestValidators);
-                $chain->append($group);
-                continue;
-            }
-
-            $chain->append($dispatcherRepository->offsetGet($values));
-        }
+        return $collection;
     }
 
     private static function exceptionMessage(array $messages): string
@@ -388,17 +374,12 @@ class RouteFactory
         );
     }
 
-    private static function getHandlerExceptionParser(
-        array $route,
-        ExceptionHandlerCollection $collection = null
-    ) : ?ExceptionHandlerCollectionInterface
+    private static function getExceptionHandlers(array $route) : StringCollection
     {
-        if(!isset($route['response']['exception']['handlers'])) {
-            return null;
-        }
+        $collection = new StringCollection();
 
-        if(0 === $collection->count()){
-            return null;
+        if(!isset($route['response']['exception']['handlers'])) {
+            return $collection;
         }
 
         if(!is_array($route['response']['exception']['handlers'])){
@@ -406,11 +387,8 @@ class RouteFactory
             throw new Exception\InvalidSectionException(self::exceptionMessage([$msg]));
         }
 
-        /**
-         * @var ExceptionHandlerCollectionInterface $result
-         */
-        $result = $collection->filterByKeys($route['response']['exception']['handlers']);
+        $collection->appendMany($route['response']['exception']['handlers']);
 
-        return $result;
+        return $collection;
     }
 }

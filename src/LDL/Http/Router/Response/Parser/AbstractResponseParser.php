@@ -58,11 +58,11 @@ abstract class AbstractResponseParser implements ResponseParserInterface
         return $this->options;
     }
 
-    final public function parse(Router $router, ?array $data): void
+    final public function parse(Router $router, $data): void
     {
         $this->isParsed = true;
         $this->result = $this->_parse($router, $data);
     }
 
-    abstract protected function _parse(Router $router, ?array $data) : ?string;
+    abstract protected function _parse(Router $router, $data) : ?string;
 }

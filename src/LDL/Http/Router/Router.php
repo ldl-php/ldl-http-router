@@ -2,34 +2,25 @@
 
 namespace LDL\Http\Router;
 
-use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Http\Router\Dispatcher\RouterDispatcher;
-use LDL\Http\Router\Handler\Exception\Collection\ExceptionHandlerCollection;
-use LDL\Http\Router\Middleware\MiddlewareChain;
-use LDL\Http\Router\Middleware\MiddlewareChainCollection;
-use LDL\Http\Router\Middleware\MiddlewareChainInterface;
-use LDL\Http\Router\Response\Exception\CustomResponseException;
-use LDL\Http\Router\Response\Formatter\ResponseFormatter;
 use LDL\Http\Router\Response\Formatter\ResponseFormatterInterface;
-use LDL\Http\Router\Response\Formatter\ResponseFormatterRepository;
-use LDL\Http\Router\Response\Formatter\ResponseFormatterRepositoryInterface;
-use LDL\Http\Router\Response\Parser\Json\JsonResponseParser;
-use LDL\Http\Router\Response\Parser\Repository\ResponseParserRepository;
 use LDL\Http\Router\Response\Parser\ResponseParserInterface;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepository;
-use LDL\Http\Router\Route\Config\Parser\RouteConfigParserRepositoryInterface;
 use LDL\Http\Router\Route\Group\RouteGroupInterface;
+use LDL\Http\Router\Container\RouterContainerInterface;
 use LDL\Http\Router\Route\Route;
 use LDL\Http\Router\Route\RouteInterface;
-use LDL\Http\Router\Route\Validator\Exception\ValidationTerminateException;
-use LDL\Http\Router\Route\Validator\HasValidatorChainInterface;
-use LDL\Http\Router\Route\Validator\Traits\RequestValidatorChainTrait;
+use LDL\Http\Router\Validator\Request\Traits\RequestValidatorChainTrait;
+use LDL\Http\Router\Validator\Response\Traits\ResponseValidatorChainTrait;
+use LDL\Type\Collection\Types\String\StringCollection;
+use League\Event\EventDispatcher;
+use League\Event\EventDispatchingListenerRegistry;
 use Phroute\Phroute\RouteCollector;
 
-class Router implements HasValidatorChainInterface
+class Router implements RouterInterface
 {
     use RequestValidatorChainTrait;
+    use ResponseValidatorChainTrait;
 
     /**
      * @var RouteCollector
@@ -37,176 +28,90 @@ class Router implements HasValidatorChainInterface
     private $collector;
 
     /**
-     * @var RequestInterface
-     */
-    private $request;
-
-    /**
-     * @var ResponseInterface
-     */
-    private $response;
-
-    /**
-     * @var ?ExceptionHandlerCollection
-     */
-    private $exceptionHandlerCollection;
-
-    /**
      * @var Route
      */
     private $currentRoute;
 
     /**
-     * @var ResponseParserRepository
+     * Contains a string list of pre dispatchers
+     *
+     * @var StringCollection
      */
-    private $responseParserRepository;
+    private $preDispatchList;
 
     /**
-     * @var ResponseFormatterRepository
+     * Contains a string list of pre dispatchers
+     *
+     * @var StringCollection
      */
-    private $responseFormatterRepository;
-
-    /**
-     * @var MiddlewareChainInterface
-     */
-    private $preDispatchChain;
-
-    /**
-     * @var MiddlewareChainInterface
-     */
-    private $postDispatchChain;
-
-    /**
-     * @var RouteConfigParserRepositoryInterface
-     */
-    private $configParserRepository;
+    private $postDispatchList;
 
     /**
      * @var RouterDispatcher
      */
     private $dispatcher;
 
+    /**
+     * @var RouterContainerInterface
+     */
+    private $sources;
+
+    /**
+     * @var EventDispatchingListenerRegistry
+     */
+    private $events;
+
     public function __construct(
-        RequestInterface $request,
-        ResponseInterface $response,
-        RouteConfigParserRepositoryInterface $configParserCollection = null,
-        ExceptionHandlerCollection $exceptionHandlerCollection = null,
-        ResponseParserRepository $responseParserRepository = null,
-        ResponseFormatterRepositoryInterface $responseFormatterRepository = null,
-        MiddlewareChainInterface $preDispatcherRepository = null,
-        MiddlewareChainInterface $postDispatcherRepository = null
+        RouterContainerInterface $parameterSources,
+        EventDispatchingListenerRegistry $events=null,
+        StringCollection $preDispatchersList = null,
+        StringCollection $postDispatchersList = null
     )
     {
         $this->collector = new RouteCollector();
-        $this->request = $request;
-        $this->response = $response;
-        $this->exceptionHandlerCollection = $exceptionHandlerCollection ?? new ExceptionHandlerCollection();
-        $this->preDispatchChain = $preDispatcherRepository ?? new MiddlewareChain();
-        $this->postDispatchChain = $postDispatcherRepository ?? new MiddlewareChain();
-        $this->configParserRepository = $configParserCollection ?? new RouteConfigParserRepository();
-
+        $this->sources = $parameterSources;
+        $this->preDispatchList = $preDispatchersList ?? new StringCollection();
+        $this->postDispatchList = $postDispatchersList ?? new StringCollection();
         $this->dispatcher = new RouterDispatcher($this);
-
-        $jsonParser = new JsonResponseParser();
-
-        /**
-         * If no response parser repo is passed, create a new instance
-         */
-        if(null === $responseParserRepository){
-            $responseParserRepository = new ResponseParserRepository();
-        }
-
-        /**
-         * We always need a response parser to reply to a request, so we add the JSON parser
-         * and select it, this can of course be changed by the response parser set in the route configuration.
-         *
-         * But for all other requests which do not have a response parser configuration directive, the JSON parser
-         * will be used.
-         */
-        if(
-            null === $responseParserRepository->getSelectedKey() &&
-            false === $responseParserRepository->hasKey($jsonParser->getName())
-        ){
-            $responseParserRepository->append($jsonParser);
-            $responseParserRepository->select($jsonParser->getName());
-        }
-
-        $this->responseParserRepository = $responseParserRepository;
-
-        $defaultResponseFormatter = new ResponseFormatter();
-
-        /**
-         * If no response formatter repo is passed, create a new instance
-         */
-        if(null === $responseFormatterRepository){
-            $responseFormatterRepository = new ResponseFormatterRepository();
-        }
-
-        /**
-         * We always need a response formatter to format a response, so we add the default response formatter
-         * and select it, this can of course be changed by the response formatter configuration directive
-         * in the each route's configuration.
-         *
-         * But for all other responses which do not have a response formatter configuration directive, the
-         * default response parser will be used.
-         */
-        if(
-            null === $responseFormatterRepository->getSelectedKey() &&
-            false === $responseFormatterRepository->hasKey($defaultResponseFormatter->getName())
-        ){
-            $responseFormatterRepository->append($defaultResponseFormatter);
-            $responseFormatterRepository->select($defaultResponseFormatter->getName());
-        }
-
-        $this->responseFormatterRepository = $responseFormatterRepository;
-
+        $this->events = new EventDispatcher();
     }
 
-    public function getConfigParserRepository() : RouteConfigParserRepositoryInterface
+    public function getEventBus() : EventDispatchingListenerRegistry
     {
-        return $this->configParserRepository;
+        return $this->events;
     }
 
     /**
-     * @return MiddlewareChainInterface
+     * Must be part of router config
+     *
+     * @return StringCollection
      */
-    public function getPreDispatchChain() : MiddlewareChainInterface
+    public function getPreDispatchList() : StringCollection
     {
-        return $this->preDispatchChain;
+        return $this->preDispatchList;
     }
 
     /**
-     * @return MiddlewareChainInterface
+     * Must be part of router config
+     *
+     * @return StringCollection
      */
-    public function getPostDispatchChain() : MiddlewareChainInterface
+    public function getPostDispatchList() : StringCollection
     {
-        return $this->postDispatchChain;
+        return $this->postDispatchList;
     }
 
     /**
      * @param RouteInterface $route
      * @param RouteGroupInterface|null $group
-     * @return Router
      *
-     * @throws Exception\InvalidHttpMethodException
+     * @return RouterInterface
      */
-    public function addRoute(RouteInterface $route, RouteGroupInterface $group=null) : self
+    public function addRoute(RouteInterface $route, RouteGroupInterface $group=null) : RouterInterface
     {
-        $response = $this->response;
+        $response = $this->sources->getResponse();
 
         $config = $route->getConfig();
-        $method = $config->getRequestMethod();
-
-        if(!method_exists($this->collector, $method)){
-            $msg = sprintf(
-                '%s is not a recognized method',
-                $method
-            );
-
-            $response->setStatusCode(ResponseInterface::HTTP_CODE_BAD_REQUEST);
-
-            throw new Exception\InvalidHttpMethodException($msg);
-        }
 
         $path = "v{$config->getVersion()}/{$config->getPrefix()}";
 
@@ -214,7 +119,7 @@ class Router implements HasValidatorChainInterface
             $path = "{$group->getPrefix()}/$path";
         }
 
-        $this->collector->$method($path, $route);
+        $this->collector->addRoute(strtoupper($config->getRequestMethod()), $path, $route);
 
         return $this;
     }
@@ -234,40 +139,14 @@ class Router implements HasValidatorChainInterface
         return $this;
     }
 
-    public function getCurrentRoute() : ?Route
+    public function getCurrentRoute() : ?RouteInterface
     {
         return $this->currentRoute;
-    }
-
-    public function getResponseParserRepository() : ResponseParserRepository
-    {
-        return $this->responseParserRepository;
-    }
-
-    public function getResponseFormatterRepository() : ResponseFormatterRepository
-    {
-        return $this->responseFormatterRepository;
     }
 
     public function getDispatcher() : RouterDispatcher
     {
         return $this->dispatcher;
-    }
-
-    /**
-     * @return RequestInterface
-     */
-    public function getRequest(): RequestInterface
-    {
-        return $this->request;
-    }
-
-    /**
-     * @return ResponseInterface
-     */
-    public function getResponse(): ResponseInterface
-    {
-        return $this->response;
     }
 
     /**
@@ -278,30 +157,9 @@ class Router implements HasValidatorChainInterface
         return $this->collector;
     }
 
-    /**
-     * @return ExceptionHandlerCollection
-     */
-    public function getExceptionHandlers(): ExceptionHandlerCollection
+    public function getParameterSources(): RouterContainerInterface
     {
-        return $this->exceptionHandlerCollection;
-    }
-
-    public function lockMiddleware() : Router
-    {
-        $this->preDispatchChain->lock();
-        $this->postDispatchChain->lock();
-
-        return $this;
-    }
-
-    public function getFullDispatcherChain() : MiddlewareChainCollection
-    {
-        $collection = new MiddlewareChainCollection();
-
-        $collection->append($this->preDispatchChain)
-            ->append($this->postDispatchChain);
-
-        return $collection;
+        return $this->sources;
     }
 
     /**
@@ -310,85 +168,73 @@ class Router implements HasValidatorChainInterface
      */
     public function dispatch() : ResponseInterface
     {
+
+        $request  = $this->sources->getRequest();
+        $response = $this->sources->getResponse();
+
         $this->dispatcher->initializeRoutes($this->collector->getData());
 
         try {
-            $this->getValidatorChain()->validate($this);
 
             $this->dispatcher
                 ->dispatch(
-                    $this->request->getMethod(),
-                    parse_url($this->request->getRequestUri(), \PHP_URL_PATH)
+                    $this->sources,
+                    $request->getMethod(),
+                    parse_url($request->getRequestUri(), \PHP_URL_PATH)
                 );
 
-            /**
-             * @var ResponseParserInterface $parser
-             */
-            $parser = $this->responseParserRepository->getSelectedItem();
+            $response->setStatusCode(
+                $this->getCurrentRoute()
+                    ->getConfig()
+                    ->getResponseSuccessCode()
+            );
 
-            if (false === $parser->isParsed()) {
-                /**
-                 * @var ResponseFormatterInterface $formatter
-                 */
-                $formatter = $this->responseFormatterRepository->getSelectedItem();
-
-                if (false === $formatter->isFormatted()) {
-                    $formatter->format($this->dispatcher->getResult());
-                }
-
-                $result = $formatter->getResult();
-
-                $parser->parse(
-                    $this,
-                    $result
-                );
-            }
+            $result = $this->sources->getResponseResult();
 
             /**
-             * Set the content type header according to the response parser
+             * @var ResponseFormatterInterface $formatter
              */
-            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+            $result = $this->sources
+                ->getResponseFormatters()
+                ->getSelectedItem()
+                ->format($result)
+                ->getResult();
 
-            $this->response->setContent($parser->getResult());
+        }catch(\Exception $e){
 
-        }catch(CustomResponseException $e){
+            $eHandlers = $this->sources->getExceptionHandlers()->handle($e);
+            $response->setStatusCode($eHandlers->getResponseCode());
+            $result = $eHandlers->getContent();
 
-            /**
-             * @var ResponseParserInterface $parser
-             */
-            $parser = $this->responseParserRepository->getSelectedItem();
-
-            /**
-             * Set the content type header according to the response parser
-             */
-            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
-
-            $this->response->setContent($e->getMessage());
-
-        }catch(ValidationTerminateException $e){
-            /**
-             * @var ResponseParserInterface $parser
-             */
-            $parser = $this->responseParserRepository->getSelectedItem();
-
-            if (false === $parser->isParsed()) {
-
-                $parser->parse(
-                    $this,
-                    json_decode($e->getMessage(), true, 2048, \JSON_THROW_ON_ERROR)
-                );
-            }
-
-            /**
-             * Set the content type header according to the response parser
-             */
-            $this->response->getHeaderBag()->set('Content-Type', $parser->getContentType());
-
-            $this->response->setContent($parser->getResult());
-            $this->response->setStatusCode($e->getCode());
         }
 
-        return $this->response;
+        /**
+         * We need to transform the result to a string, whether it's an error or not.
+         * For this we make use of the response parser and response formatter
+         */
+
+        /**
+         * @var ResponseParserInterface $parser
+         */
+        $parser = $this->sources
+            ->getResponseParsers()
+            ->getSelectedItem();
+
+        if (false === $parser->isParsed()) {
+            $parser->parse(
+                $this,
+                $result
+            );
+        }
+
+        /**
+         * Set the content type header according to the response parser
+         */
+        $response->getHeaderBag()->set('Content-Type', $parser->getContentType());
+
+        $response->setContent($parser->getResult());
+
+        return $response;
     }
 
 }

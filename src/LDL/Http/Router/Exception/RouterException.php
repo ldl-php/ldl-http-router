@@ -2,7 +2,9 @@
 
 namespace LDL\Http\Router\Exception;
 
-abstract class RouterException extends \Exception
+use LDL\Framework\Base\Exception\LDLException;
+
+abstract class RouterException extends LDLException
 {
 
 }

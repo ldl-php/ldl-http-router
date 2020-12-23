@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Response\Formatter;
 
-use LDL\Http\Router\Middleware\MiddlewareChainCollection;
+use LDL\Http\Router\Middleware\Chain\Result\MiddlewareChainResultInterface;
 
 abstract class AbstractResponseFormatter implements ResponseFormatterInterface
 {
@@ -59,15 +59,17 @@ abstract class AbstractResponseFormatter implements ResponseFormatterInterface
     }
 
     final public function format(
-        MiddlewareChainCollection $collection,
+        MiddlewareChainResultInterface $result,
         bool $setFormatted=false
-    ) : void
+    ) : ResponseFormatterInterface
     {
         $this->isFormatted = $setFormatted;
-        $this->result = $this->_format($collection);
+        $this->result = $this->_format($result);
+
+        return $this;
     }
 
     abstract protected function _format(
-        MiddlewareChainCollection $collection
+        MiddlewareChainResultInterface $collection
     ) : ?array;
 }

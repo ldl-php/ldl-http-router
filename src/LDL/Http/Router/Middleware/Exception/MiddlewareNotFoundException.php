@@ -2,7 +2,7 @@
 
 namespace LDL\Http\Router\Middleware\Exception;
 
-class MiddlewareNotFoundException extends MiddlewareChainException
+class MiddlewareNotFoundException extends MiddlewareException
 {
 
 }
