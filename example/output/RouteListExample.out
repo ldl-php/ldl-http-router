@@ -1,0 +1,116 @@
+array(4) {
+  [0]=>
+  array(7) {
+    ["name"]=>
+    string(7) "route 2"
+    ["description"]=>
+    string(14) "No description"
+    ["path"]=>
+    array(2) {
+      ["parsed"]=>
+      string(26) "frontend-group\/([\w|\d]+)"
+      ["original"]=>
+      string(6) "/:name"
+    }
+    ["dynamic"]=>
+    bool(true)
+    ["placeholders"]=>
+    array(1) {
+      [0]=>
+      string(4) "name"
+    }
+    ["dispatchers"]=>
+    array(1) {
+      [0]=>
+      string(51) "LDL\Router\Core\Route\Dispatcher\CallableDispatcher"
+    }
+    ["validators"]=>
+    string(0) ""
+  }
+  [1]=>
+  array(7) {
+    ["name"]=>
+    string(7) "route 3"
+    ["description"]=>
+    string(14) "No description"
+    ["path"]=>
+    array(2) {
+      ["parsed"]=>
+      string(38) "frontend-group\/([\w|\d]+)\/([\w|\d]+)"
+      ["original"]=>
+      string(12) "/:name/:test"
+    }
+    ["dynamic"]=>
+    bool(true)
+    ["placeholders"]=>
+    array(2) {
+      [0]=>
+      string(4) "name"
+      [1]=>
+      string(4) "test"
+    }
+    ["dispatchers"]=>
+    array(2) {
+      [0]=>
+      string(12) "MyDispatcher"
+      [1]=>
+      string(15) "MyDispatcherTwo"
+    }
+    ["validators"]=>
+    string(0) ""
+  }
+  [2]=>
+  array(7) {
+    ["name"]=>
+    string(7) "route 1"
+    ["description"]=>
+    string(14) "No description"
+    ["path"]=>
+    array(2) {
+      ["parsed"]=>
+      string(16) "test\/([\w|\d]+)"
+      ["original"]=>
+      string(11) "/test/:name"
+    }
+    ["dynamic"]=>
+    bool(true)
+    ["placeholders"]=>
+    array(1) {
+      [0]=>
+      string(4) "name"
+    }
+    ["dispatchers"]=>
+    array(1) {
+      [0]=>
+      string(12) "MyDispatcher"
+    }
+    ["validators"]=>
+    string(0) ""
+  }
+  [3]=>
+  array(7) {
+    ["name"]=>
+    string(15) "My static route"
+    ["description"]=>
+    string(14) "No description"
+    ["path"]=>
+    array(2) {
+      ["parsed"]=>
+      string(8) "test/abc"
+      ["original"]=>
+      string(9) "/test/abc"
+    }
+    ["dynamic"]=>
+    bool(false)
+    ["placeholders"]=>
+    array(0) {
+    }
+    ["dispatchers"]=>
+    array(1) {
+      [0]=>
+      string(12) "MyDispatcher"
+    }
+    ["validators"]=>
+    string(0) ""
+  }
+}
