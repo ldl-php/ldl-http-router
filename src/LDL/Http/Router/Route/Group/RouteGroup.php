@@ -1,60 +1,35 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace LDL\Http\Router\Route\Group;
 
-class RouteGroup implements RouteGroupInterface
+use LDL\Http\Router\Route\RouteInterface;
+use LDL\Type\Collection\AbstractTypedCollection;
+use LDL\Validators\InterfaceComplianceValidator;
+
+class RouteGroup extends AbstractTypedCollection implements RouteGroupInterface
 {
     /**
      * @var string
      */
-    private $prefix;
-
-    /**
-     * @var RouteCollection
-     */
-    private $routes;
-
-    /**
-     * @var string
-     */
-    private $name;
-
-    /**
-     * @var string
-     */
-    private $description;
+    private $path;
 
     public function __construct(
-        string $name,
-        string $prefix,
-        RouteCollection $routes = null,
-        string $description=''
-    )
-    {
-        $this->routes = $routes ?? new RouteCollection();
-        $this->prefix = $prefix;
-        $this->name = $name;
-        $this->description = $description;
+        string $path,
+        iterable $items = null
+    ) {
+        $this->path = $path;
+        $this->getAppendValueValidatorChain()
+            ->getChainItems()
+            ->append(new InterfaceComplianceValidator(RouteInterface::class))
+            ->lock();
+
+        parent::__construct($items);
     }
 
-    public function getName() : string
+    public function getPath(): string
     {
-       return $this->name;
+        return $this->path;
     }
-
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
-    public function getPrefix(): string
-    {
-        return $this->prefix;
-    }
-
-    public function getRoutes(): RouteCollection
-    {
-        return $this->routes;
-    }
-
 }

@@ -1,23 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace LDL\Http\Router\Route;
 
-use LDL\Http\Router\Route\Config\RouteConfig;
-use LDL\Http\Router\Router;
+use LDL\Framework\Base\Contracts\DescribableInterface;
+use LDL\Framework\Base\Contracts\NameableInterface;
+use LDL\Http\Router\Route\Dispatcher\Collection\RouteDispatcherCollection;
 
-interface RouteInterface
+interface RouteInterface extends NameableInterface, DescribableInterface
 {
-    public const ROUTE_VERSION_PARAMETER = 'X-API-Version';
-    public const ROUTE_VERSION_HEADER = 'X-API-Version';
+    public function getPath(): string;
 
-    /**
-     * @return Router
-     */
-    public function getRouter() : Router;
-
-    /**
-     * @return RouteConfig
-     */
-    public function getConfig() : RouteConfig;
-
+    public function getDispatchers(): RouteDispatcherCollection;
 }
