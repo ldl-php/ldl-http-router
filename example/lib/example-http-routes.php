@@ -4,37 +4,9 @@ declare(strict_types=1);
 
 use LDL\Router\Core\Route\Collection\RouteCollection;
 use LDL\Router\Core\Route\Dispatcher\Collection\RouteDispatcherCollection;
-use LDL\Router\Core\Route\Dispatcher\RouteDispatcherInterface;
 use LDL\Router\Http\Route\HttpRoute;
 
-class HttpDispatcherExample implements RouteDispatcherInterface
-{
-    /**
-     * @var string
-     */
-    private $name;
-
-    /**
-     * @var string
-     */
-    private $data;
-
-    public function __construct(string $name, string $data)
-    {
-        $this->name = $name;
-        $this->data = $data;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function dispatch(string $name = null)
-    {
-        return $this->data;
-    }
-}
+require_once __DIR__.'/example-http-dispatchers.php';
 
 return new RouteCollection([
         new RouteCollection([

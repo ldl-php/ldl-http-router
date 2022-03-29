@@ -1,0 +1,9 @@
+Create a RouteDispatcherCollection and add 3 dispatchers ...
+Filter the collection by names: 'dispatcher 1' and 'dispatcher 2'
+Count of filtered collection must be equal to 2:
+OK count is == 2
+Filter by UNKNOWN dispatcher names (test, test1), count must be 0
+OK count is == 0
+Get dispatcher by name: 'dispatcher 3'
+OK dispatcher 3 was found
+Get dispatcher UNKNOWN name: 'dispatcher 4'
