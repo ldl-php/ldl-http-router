@@ -12,5 +12,7 @@ use LDL\Validators\Chain\ValidatorChainInterface;
 
 interface RouteCollectionInterface extends TypedCollectionInterface, RoutePathInterface
 {
+    public function getPath(): string;
+
     public function getValidatorChain(): ValidatorChainInterface;
 }

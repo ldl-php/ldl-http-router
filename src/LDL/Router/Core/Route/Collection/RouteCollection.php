@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LDL\Router\Core\Route\Collection;
 
+use LDL\Router\Core\Route\Collection\Traits\RouteCollectionInterfaceTrait;
 use LDL\Router\Core\Route\RouteInterface;
 use LDL\Type\Collection\AbstractTypedCollection;
 use LDL\Validators\Chain\AndValidatorChain;
@@ -13,24 +14,16 @@ use LDL\Validators\InterfaceComplianceValidator;
 
 class RouteCollection extends AbstractTypedCollection implements RouteCollectionInterface
 {
-    /**
-     * @var string
-     */
-    private $path;
-
-    /**
-     * @var ValidatorChainInterface
-     */
-    private $validatorChain;
+    use RouteCollectionInterfaceTrait;
 
     public function __construct(
         iterable $items = null,
         string $path = '',
         ValidatorChainInterface $chain = null
     ) {
-        $this->path = $path;
+        $this->_tRouteCollectionPath = $path;
 
-        $this->validatorChain = $chain ?? new AndValidatorChain();
+        $this->_tRouteCollectionValidatorChain = $chain ?? new AndValidatorChain();
         $this->getAppendValueValidatorChain(OrValidatorChain::class)
             ->getChainItems()
             ->append(new InterfaceComplianceValidator(RouteInterface::class))
@@ -38,15 +31,5 @@ class RouteCollection extends AbstractTypedCollection implements RouteCollection
             ->lock();
 
         parent::__construct($items);
-    }
-
-    public function getPath(): string
-    {
-        return $this->path;
-    }
-
-    public function getValidatorChain(): ValidatorChainInterface
-    {
-        return $this->validatorChain;
     }
 }

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use LDL\Router\Core\Route\Collection\RouteCollection;
 use LDL\Router\Core\Route\Dispatcher\Collection\RouteDispatcherCollection;
+use LDL\Router\Http\Route\Collection\HttpRouteCollection;
 use LDL\Router\Http\Route\HttpRoute;
 
 require_once __DIR__.'/example-http-dispatchers.php';
 
-return new RouteCollection([
-        new RouteCollection([
+return new HttpRouteCollection([
+        new HttpRouteCollection([
             new HttpRoute(
                 '/static',
                 ['GET'],

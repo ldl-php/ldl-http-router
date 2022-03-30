@@ -13,3 +13,5 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- fix/1202049026119589 - Fix HttpCollection into usable state
+
