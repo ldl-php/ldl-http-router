@@ -7,6 +7,7 @@ namespace LDL\Router\Core;
 use LDL\Router\Core\Exception\RouteNotFoundException;
 use LDL\Router\Core\Route\Collection\RouteCollectionInterface;
 use LDL\Router\Core\Route\Dispatcher\Result\Collection\RouteDispatcherResultCollectionInterface;
+use LDL\Router\Core\Route\Parsed\Collection\ParsedRouteCollectionInterface;
 use LDL\Router\Core\Route\Path\Result\Collection\RoutePathMatchingCollectionInterface;
 use LDL\Validators\Chain\ValidatorChainInterface;
 
@@ -23,5 +24,5 @@ interface RouterInterface
      */
     public function match(string $path): RouteDispatcherResultCollectionInterface;
 
-    public function getRouteList(): array;
+    public function getRouteList(): ParsedRouteCollectionInterface;
 }
