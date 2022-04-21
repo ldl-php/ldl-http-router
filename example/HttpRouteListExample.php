@@ -15,4 +15,6 @@ $router = new HttpRouter(
     require __DIR__.'/lib/example-http-routes.php'
 );
 
-var_dump($router->getRouteList());
+foreach ($router->getRouteList() as $route) {
+    dump($route->toPrimitiveArray());
+}

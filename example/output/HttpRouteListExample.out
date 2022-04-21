@@ -1,103 +1,47 @@
-array(3) {
-  [0]=>
-  array(8) {
-    ["name"]=>
-    string(9) "GET route"
-    ["description"]=>
-    string(14) "No description"
-    ["path"]=>
-    array(2) {
-      ["parsed"]=>
-      string(21) "frontend/group/static"
-      ["original"]=>
-      string(7) "/static"
-    }
-    ["dynamic"]=>
-    bool(false)
-    ["placeholders"]=>
-    array(0) {
-    }
-    ["methods"]=>
-    array(1) {
-      [0]=>
-      string(3) "GET"
-    }
-    ["dispatchers"]=>
-    array(1) {
-      [0]=>
-      string(21) "HttpDispatcherExample"
-    }
-    ["validators"]=>
-    string(42) ""Validate that the request method is: GET""
-  }
-  [1]=>
-  array(8) {
-    ["name"]=>
-    string(10) "POST route"
-    ["description"]=>
-    string(14) "No description"
-    ["path"]=>
-    array(2) {
-      ["parsed"]=>
-      string(27) "frontend\/group\/([\w|\d]+)"
-      ["original"]=>
-      string(6) "/:name"
-    }
-    ["dynamic"]=>
-    bool(true)
-    ["placeholders"]=>
-    array(1) {
-      [0]=>
-      string(4) "name"
-    }
-    ["methods"]=>
-    array(1) {
-      [0]=>
-      string(4) "POST"
-    }
-    ["dispatchers"]=>
-    array(1) {
-      [0]=>
-      string(21) "HttpDispatcherExample"
-    }
-    ["validators"]=>
-    string(43) ""Validate that the request method is: POST""
-  }
-  [2]=>
-  array(8) {
-    ["name"]=>
-    string(14) "POST/GET Route"
-    ["description"]=>
-    string(14) "No description"
-    ["path"]=>
-    array(2) {
-      ["parsed"]=>
-      string(39) "frontend\/group\/([\w|\d]+)\/([\w|\d]+)"
-      ["original"]=>
-      string(12) "/:name/:test"
-    }
-    ["dynamic"]=>
-    bool(true)
-    ["placeholders"]=>
-    array(2) {
-      [0]=>
-      string(4) "name"
-      [1]=>
-      string(4) "test"
-    }
-    ["methods"]=>
-    array(2) {
-      [0]=>
-      string(4) "POST"
-      [1]=>
-      string(3) "GET"
-    }
-    ["dispatchers"]=>
-    array(1) {
-      [0]=>
-      string(21) "HttpDispatcherExample"
-    }
-    ["validators"]=>
-    string(50) ""Validate that the request method is: POST or GET""
-  }
-}
+array:7 [
+  "name" => "GET route"
+  "description" => "No description"
+  "path" => array:2 [
+    "parsed" => "frontend/group/static"
+    "original" => "/static"
+  ]
+  "dynamic" => false
+  "placeholders" => []
+  "dispatchers" => array:1 [
+    0 => "HttpDispatcherExample"
+  ]
+  "validators" => ""Validate that the request method is: GET""
+]
+array:7 [
+  "name" => "POST route"
+  "description" => "No description"
+  "path" => array:2 [
+    "parsed" => "frontend\/group\/([\w|\d]+)"
+    "original" => "/:name"
+  ]
+  "dynamic" => true
+  "placeholders" => array:1 [
+    0 => "name"
+  ]
+  "dispatchers" => array:1 [
+    0 => "HttpDispatcherExample"
+  ]
+  "validators" => ""Validate that the request method is: POST""
+]
+array:7 [
+  "name" => "POST/GET Route"
+  "description" => "No description"
+  "path" => array:2 [
+    "parsed" => "frontend\/group\/([\w|\d]+)\/([\w|\d]+)"
+    "original" => "/:name/:test"
+  ]
+  "dynamic" => true
+  "placeholders" => array:2 [
+    0 => "name"
+    1 => "test"
+  ]
+  "dispatchers" => array:1 [
+    0 => "HttpDispatcherExample"
+  ]
+  "validators" => ""Validate that the request method is: POST or GET""
+]
