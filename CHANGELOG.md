@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- feature/1202174969889331 - Add DescribableInterface to RouteDispatcherInterface
 - feature/1202160954570621 - Router::getRouteList returns a ParsedRouteCollection instead of an array
 - feature/1202041446359082 - Add RouteDispatcherCollection::filterByNames / getByName 
 - feature/1201837260731760 - Router refactor

@@ -1,13 +1,13 @@
 <?php
 
+use LDL\Framework\Base\Traits\DescribableInterfaceTrait;
+use LDL\Framework\Base\Traits\NameableTrait;
 use LDL\Router\Core\Route\Dispatcher\RouteDispatcherInterface;
 
 class HttpDispatcherExample implements RouteDispatcherInterface
 {
-    /**
-     * @var string
-     */
-    private $name;
+    use NameableTrait;
+    use DescribableInterfaceTrait;
 
     /**
      * @var string
@@ -16,13 +16,9 @@ class HttpDispatcherExample implements RouteDispatcherInterface
 
     public function __construct(string $name, string $data)
     {
-        $this->name = $name;
+        $this->_tName = $name;
+        $this->_tDescription = 'No description';
         $this->data = $data;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
     }
 
     public function dispatch(string $name = null)
