@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use LDL\Framework\Base\Traits\DescribableInterfaceTrait;
+use LDL\Framework\Base\Traits\NameableTrait;
 use LDL\Router\Core\Route\Collection\RouteCollection;
 use LDL\Router\Core\Route\Dispatcher\Collection\RouteDispatcherCollection;
 use LDL\Router\Core\Route\Dispatcher\NeedsDispatchersInterface;
@@ -11,10 +13,8 @@ use LDL\Router\Core\Route\Route;
 
 class MyDispatcher implements RouteDispatcherInterface
 {
-    public function getName(): string
-    {
-        return 'dispatcher 1';
-    }
+    use NameableTrait;
+    use DescribableInterfaceTrait;
 
     public function dispatch(string $name = null)
     {
@@ -26,9 +26,13 @@ class MyDispatcher implements RouteDispatcherInterface
 
 class MyDispatcherTwo implements NeedsDispatchersInterface
 {
-    public function getName(): string
+    use NameableTrait;
+    use DescribableInterfaceTrait;
+
+    public function __construct()
     {
-        return 'dispatcher 2';
+        $this->_tName = 'dispatcher 2';
+        $this->_tDescription = 'No description';
     }
 
     public function dispatch(RouteDispatcherResultCollectionInterface $results = null, string ...$params)
