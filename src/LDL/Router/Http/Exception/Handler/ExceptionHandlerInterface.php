@@ -2,19 +2,16 @@
 
 declare(strict_types=1);
 
-namespace LDL\Router\Http\Dispatcher;
+namespace LDL\Router\Http\Exception\Handler;
 
 use LDL\Http\Core\Request\RequestInterface;
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Router\Http\HttpRouterInterface;
-use LDL\Router\Http\Response\Exception\HttpResponseException;
 
-interface HttpRouterDispatcherInterface
+interface ExceptionHandlerInterface
 {
-    /**
-     * @throws HttpResponseException
-     */
-    public function dispatch(
+    public function handle(
+        \Throwable $e,
         HttpRouterInterface $router,
         RequestInterface $request,
         ResponseInterface $response

@@ -6,21 +6,22 @@ namespace LDL\Router\Http;
 
 use LDL\Framework\Base\Constants;
 use LDL\Http\Core\Request\RequestInterface;
+use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Router\Core\Route\Collection\RouteCollectionInterface;
 use LDL\Router\Core\Route\Collector\CollectedRouteInterface;
 use LDL\Router\Core\Route\Collector\RouteCollector;
-use LDL\Router\Core\Route\Dispatcher\Result\Collection\RouteDispatcherResultCollectionInterface;
 use LDL\Router\Core\Route\Parsed\Collection\ParsedRouteCollection;
 use LDL\Router\Core\Route\Parsed\Collection\ParsedRouteCollectionInterface;
 use LDL\Router\Core\Route\Parsed\ParsedRoute;
 use LDL\Router\Core\Route\Path\Parser\RoutePathParser;
 use LDL\Router\Core\Route\Path\Parser\RoutePathParserInterface;
-use LDL\Router\Core\Route\Path\Result\Collection\RoutePathMatchingCollectionInterface;
 use LDL\Router\Core\Route\Path\Result\RoutePathMatchingResultInterface;
 use LDL\Router\Core\Route\RouteInterface;
 use LDL\Router\Core\Traits\RouterInterfaceTrait;
-use LDL\Router\Http\Dispatcher\DefaultHttpRouterRequestDispatcherInterface;
 use LDL\Router\Http\Dispatcher\HttpRouterDispatcherInterface;
+use LDL\Router\Http\Dispatcher\HttpRouterRequestDispatcher;
+use LDL\Router\Http\Exception\Handler\ExceptionHandlerInterface;
+use LDL\Router\Http\Exception\Handler\HttpRouterExceptionHandler;
 use LDL\Router\Http\Route\HttpRoute;
 use LDL\Validators\Chain\AndValidatorChain;
 use LDL\Validators\Chain\ValidatorChainInterface;
@@ -30,22 +31,29 @@ class HttpRouter implements HttpRouterInterface
     use RouterInterfaceTrait;
 
     /**
+     * @var ExceptionHandlerInterface
+     */
+    private $exceptionHandler;
+
+    /**
      * @var HttpRouterDispatcherInterface
      */
-    private $requestDispatcher;
+    private $dispatcher;
 
     public function __construct(
         RouteCollectionInterface $routes,
-        HttpRouterDispatcherInterface $requestDispatcher = null,
         RoutePathParserInterface $parser = null,
         RouteCollector $routeCollector = null,
-        ValidatorChainInterface $chain = null
+        ValidatorChainInterface $chain = null,
+        HttpRouterDispatcherInterface $dispatcher = null,
+        ExceptionHandlerInterface $handler = null
     ) {
         $this->_tRouterTraitRoutes = $routes;
         $this->_tRouterTraitParser = $parser ?? new RoutePathParser();
         $this->_tRouterTraitRouteCollector = $routeCollector ?? new RouteCollector();
         $this->_tRouterTraitValidatorChain = $chain ?? new AndValidatorChain();
-        $this->requestDispatcher = $requestDispatcher ?? new DefaultHttpRouterRequestDispatcherInterface();
+        $this->dispatcher = $dispatcher ?? new HttpRouterRequestDispatcher();
+        $this->exceptionHandler = $handler ?? new HttpRouterExceptionHandler();
     }
 
     public function getRouteList(): ParsedRouteCollectionInterface
@@ -80,18 +88,18 @@ class HttpRouter implements HttpRouterInterface
         return $return;
     }
 
-    public function findByRequest(RequestInterface $request): RoutePathMatchingCollectionInterface
+    public function findByRequest(RequestInterface $request): ?RoutePathMatchingResultInterface
     {
         $found = $this->find($request->getRequestUri());
 
         /**
-         * @var RoutePathMatchingResultInterface $f
+         * @var RoutePathMatchingResultInterface $path
          */
-        foreach ($found as $key => $f) {
+        foreach ($found as $key => $path) {
             /**
              * @var HttpRoute $route
              */
-            $route = $f->getCollectedRoute()->getRoute();
+            $route = $path->getCollectedRoute()->getRoute();
 
             try {
                 $route->getValidatorChain()->validate($request);
@@ -100,11 +108,29 @@ class HttpRouter implements HttpRouterInterface
             }
         }
 
-        return $found;
+        /**
+         * Static routes have higher relevance since they provide us with an EXACT match
+         * against the requested path.
+         */
+        $routes = $found->filterStatic();
+
+        if (count($routes) > 0) {
+            return $routes->get(0);
+        }
+
+        $routes = $found->filterDynamic();
+
+        return count($routes) > 0 ? $routes->get(0) : null;
     }
 
-    public function dispatch(RequestInterface $request): RouteDispatcherResultCollectionInterface
-    {
-        return $this->requestDispatcher->dispatch($this, $request);
+    public function dispatch(
+        RequestInterface $request,
+        ResponseInterface $response
+    ): void {
+        try {
+            $this->dispatcher->dispatch($this, $request, $response);
+        } catch (\Throwable $e) {
+            $this->exceptionHandler->handle($e, $this, $request, $response);
+        }
     }
 }

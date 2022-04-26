@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace LDL\Router\Http\Response;
+namespace LDL\Router\Http\Response\Encoder;
 
-use LDL\Router\Core\Route\Dispatcher\Collection\Result\RouteDispatcherCollectionResult;
+use LDL\Router\Core\Route\Dispatcher\Result\Collection\RouteDispatcherResultCollectionInterface;
+use LDL\Router\Core\Route\Dispatcher\Result\RouteDispatcherResultInterface;
 
-class JsonResponseEncoder implements ResponseEncoderInterface
+class JsonHttpResponseEncoder implements HttpResponseEncoderInterface
 {
     /**
      * @var bool
@@ -18,12 +19,12 @@ class JsonResponseEncoder implements ResponseEncoderInterface
         $this->pretty = $pretty;
     }
 
-    public function encode(iterable $result): string
+    public function encode(RouteDispatcherResultCollectionInterface $result): string
     {
         $return = [];
 
         /**
-         * @var RouteDispatcherCollectionResult $r
+         * @var RouteDispatcherResultInterface $r
          */
         foreach ($result as $r) {
             $return[] = [$r->getDispatcher()->getName() => $r->getDispatcherResult()];
