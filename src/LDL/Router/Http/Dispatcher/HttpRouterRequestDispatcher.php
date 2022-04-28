@@ -29,16 +29,6 @@ class HttpRouterRequestDispatcher implements HttpRouterDispatcherInterface
          * @var HttpRouteInterface $route
          */
         $route = $path->getCollectedRoute()->getRoute();
-
-        $content = $route->getResponseEncoder()->encode(
-            $route->getDispatchers()
-                ->dispatch(
-                    $path->getCollectedRoute(),
-                    ...array_values($path->getParameters())
-                )
-        );
-
-        $response->setStatusCode($route->getSuccessCode());
-        $response->setContent($content);
+        $route->dispatch($path, $response);
     }
 }
