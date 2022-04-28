@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- feature/1202196953869449 - Add nameable interface + describable interface to HttpResponseEncoder
 - feature/1202196882239482 - Add Route::dispatch()
 - feature/1202196088930337 - Add Route::getResponseEncoder()
 - feature/1202174969889331 - Add DescribableInterface to RouteDispatcherInterface
