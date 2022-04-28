@@ -6,6 +6,7 @@ namespace LDL\Router\Http\Route;
 
 use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Router\Core\Route\Dispatcher\Collection\RouteDispatcherCollection;
+use LDL\Router\Core\Route\Path\Result\RoutePathMatchingResultInterface;
 use LDL\Router\Core\Route\Traits\RouteInterfaceTrait;
 use LDL\Router\Http\Collection\HttpMethodCollection;
 use LDL\Router\Http\Response\Encoder\HttpResponseEncoderInterface;
@@ -71,5 +72,17 @@ class HttpRoute implements HttpRouteInterface
     public function getResponseEncoder(): HttpResponseEncoderInterface
     {
         return $this->encoder;
+    }
+
+    public function dispatch(RoutePathMatchingResultInterface $path, ResponseInterface $response): void
+    {
+        $this->encoder->encode(
+            $response,
+            $this->_tRouteTraitDispatchers->dispatch(
+                $path->getCollectedRoute(),
+                ...array_values($path->getParameters())
+            ));
+
+        $response->setStatusCode($this->successCode);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LDL\Router\Http\Response\Encoder;
 
+use LDL\Http\Core\Response\ResponseInterface;
 use LDL\Router\Core\Route\Dispatcher\Result\Collection\RouteDispatcherResultCollectionInterface;
 use LDL\Router\Core\Route\Dispatcher\Result\RouteDispatcherResultInterface;
 
@@ -19,7 +20,7 @@ class JsonHttpResponseEncoder implements HttpResponseEncoderInterface
         $this->pretty = $pretty;
     }
 
-    public function encode(RouteDispatcherResultCollectionInterface $result): string
+    public function encode(ResponseInterface $response, RouteDispatcherResultCollectionInterface $result): void
     {
         $return = [];
 
@@ -30,9 +31,13 @@ class JsonHttpResponseEncoder implements HttpResponseEncoderInterface
             $return[] = [$r->getDispatcher()->getName() => $r->getDispatcherResult()];
         }
 
-        return json_encode(
+        $response->getHeaderBag()->add([
+            'Content-Type' => 'application/json',
+        ]);
+
+        $response->setContent(json_encode(
             $return,
             $this->pretty ? (\JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT) : \JSON_THROW_ON_ERROR
-        );
+        ));
     }
 }
