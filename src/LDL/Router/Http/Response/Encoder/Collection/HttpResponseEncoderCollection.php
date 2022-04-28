@@ -19,4 +19,20 @@ class HttpResponseEncoderCollection extends AbstractTypedCollection implements H
 
         parent::__construct($items);
     }
+
+    public function findByName(string $name): ?HttpResponseEncoderInterface
+    {
+        $name = strtolower($name);
+
+        /**
+         * @var HttpResponseEncoderInterface $encoder
+         */
+        foreach ($this as $encoder) {
+            if (strtolower($encoder->getName()) === $name) {
+                return $encoder;
+            }
+        }
+
+        return null;
+    }
 }
